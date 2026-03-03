@@ -1,0 +1,25 @@
+{
+  "name": "my-cv",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build-en": "node scripts/build-pdf.mjs en",
+    "build-pt": "node scripts/build-pdf.mjs pt"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/danielpassy/my-cv.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/danielpassy/my-cv/issues"
+  },
+  "homepage": "https://github.com/danielpassy/my-cv#readme",
+  "dependencies": {
+    "marked": "^17.0.3"
+  }
+}
