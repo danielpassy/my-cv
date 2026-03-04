@@ -33,15 +33,6 @@ Full-stack developer with a focus on backend. Interested in business aspects bey
 - Served as final escalation for system-wide issues, diagnosing complex failures across infrastructure and application layers.
 - Acted as a technical reference for platform architecture, reliability, and internal tooling.
 
-
-### Full Stack Developer - Buser Brasil
-#### 10/2021 - 05/2023
-
-- Development of Vue 2, Vue 3 and Django apps
-- Segregated and transformed a section of a monolithic Django app into a standalone microservice
-- Migrated a Vue PWA app to Flutter (Dart).
-- Established an error prevention monitoring system using Honeycomb, Sentry, and Grafana that reduced errors by 90%.
-
 ### Tech Lead - Buser Brasil
 #### 12/2022 - 03/2023
 
@@ -49,6 +40,14 @@ Full-stack developer with a focus on backend. Interested in business aspects bey
 - Co-responsible for agile ceremonies.
 - Technical reference for a team of 5 developers, mentored 3 junior developers, and responsible for architectural decisions.
 - Managed 4 apps, making technical decisions, resolving bugs, and owning fault prevention.
+
+### Full Stack Developer - Buser Brasil
+#### 03/2021 - 05/2023
+
+- Development of Vue 2, Vue 3 and Django apps
+- Segregated and transformed a section of a monolithic Django app into a standalone microservice
+- Migrated a Vue PWA app to Flutter (Dart).
+- Established an error prevention monitoring system using Honeycomb, Sentry, and Grafana that reduced errors by 90%.
 
 ### Intern in Strategic Consulting - Signals Analytics (Israel Exchange)
 #### 08/2020 – 02/2021
