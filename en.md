@@ -8,15 +8,16 @@ Rio de Janeiro - Brazil
 
 ## About
 
-Full-stack developer with a focus on backend. Interested in business aspects beyond technical work. Communicative, curious, and collaborative. Seeking challenges and opportunities for technical growth.
+Backend developer with full-stack experience. Interested in business aspects beyond technical work. Communicative, curious, and collaborative. Seeking challenges and opportunities for technical growth.
 
 ## Professional Experience
 ### Backend Developer - Eden
-#### 05/2025 - Present
+#### 05/2025 - Present · Remote (Mexico)
 - Senior backend engineer on a multi-tenant SaaS platform, developing and operating Python/Django services used at scale across Latin America and the United States.
 - Designed and implemented third-party system integrations supporting critical business workflows, from API design to production operation.
 - Built and evolved backend features across multiple services, working directly on application code, API contracts, and database models.
 - Led performance and scalability optimizations on high-traffic services, reducing latency and infrastructure costs.
+- Developed an AI-powered medical report generation system using LangGraph and LLMs (OpenAI, Claude), implementing intent classification, prompt engineering, template retrieval, and real-time streaming over WebSockets on a Django/Redis/PostgreSQL stack.
 - Addressed findings from penetration tests and security audits, implementing fixes related to cloud security, access control, and hardening of critical production systems.
 
 
@@ -57,8 +58,8 @@ Full-stack developer with a focus on backend. Interested in business aspects bey
 
 
 ## Education
-### Chemical Engineering 
-  Universidade Federal do Rio de Janeiro 2013 - 2019
+### Chemical Engineering - Universidade Federal do Rio de Janeiro
+#### 2013 - 2019
 
 ## Skills
-Python • Django • REST / GraphQL / SOAP APIs • PostgreSQL • SQL • Redis • SQL Server • Microservices • Architecture • Clean Architecture • API Development • Message Queues • RabbitMQ • Observability • Grafana • Cloud • AWS • SaaS • DevOps • CI/CD • Docker • Kubernetes • Linux • Nginx • Security • Performance Optimization • Distributed Systems • Vue.js • React • JavaScript • TypeScript • Jest • Testing (Unit, Integration, Regression) • TDD • Agile Methodologies • English • Portuguese • Spanish • Git • HTML • CSS • Flutter • Dart • Nest • Express • MongoDB • Prometheus • Containers • Object-Oriented Programming • Architecture Patterns • Asynchronous Programming • Celery • Relational Databases
+Python • Django • REST / GraphQL / SOAP APIs • PostgreSQL • SQL • Redis • SQL Server • Microservices • Architecture • Clean Architecture • API Development • Message Queues • RabbitMQ • Observability • Grafana • Cloud • AWS • SaaS • DevOps • CI/CD • Docker • Kubernetes • Linux • Nginx • Security • Performance Optimization • Distributed Systems • LangGraph • LLMs • OpenAI • Claude • Prompt Engineering • AI Agents • WebSockets • Vue.js • React • JavaScript • TypeScript • Jest • Testing (Unit, Integration, Regression) • TDD • Agile Methodologies • English • Portuguese • Spanish • Git • HTML • CSS • Flutter • Dart • Nest • Express • MongoDB • Prometheus • Containers • Object-Oriented Programming • Architecture Patterns • Asynchronous Programming • Celery • Relational Databases

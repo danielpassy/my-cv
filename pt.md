@@ -7,7 +7,7 @@ Rio de Janeiro - Brasil
 
 ## Sobre
 
-Desenvolvedor full stack com enfoque em backend. Interessado em negócios para além da parte técnica. Comunicativo, curioso, colaborativo. Buscando desafios e oportunidades de crescimento técnico.
+Desenvolvedor backend com experiência full stack. Interessado em negócios para além da parte técnica. Comunicativo, curioso, colaborativo. Buscando desafios e oportunidades de crescimento técnico.
 
 ## Experiência Profissional
 
@@ -17,12 +17,12 @@ Desenvolvedor full stack com enfoque em backend. Interessado em negócios para a
 - Engenheiro backend sênior em plataforma SaaS multi-tenant, desenvolvendo serviços Python/Django utilizados em escala por clientes na América Latina e nos Estados Unidos.
 - Desenvolvimento e operação de integrações com sistemas de terceiros, da concepção até produção.
 - Implementação de novas funcionalidades distribuídas entre múltiplos serviços, atuando em código, contratos de API e persistência de dados.
-- Atuação em observabilidade e monitoramento, reduzindo tempo de investigação de falhas e aumentando a previsibilidade operacional.
 - Liderança em otimizações de performance e escalabilidade, reduzindo latência e custos operacionais em serviços de alto tráfego.
+- Desenvolvimento de sistema de geração de laudos médicos com IA utilizando LangGraph e LLMs (OpenAI, Claude), com classificação de intenção, engenharia de prompts, recuperação de templates e streaming em tempo real via WebSockets em stack Django/Redis/PostgreSQL.
 - Atuação direta sobre resultados de pen testing e auditorias de segurança, implementando correções, hardening de serviços críticos e melhorias em controle de acesso e segurança em nuvem.
 
 
-### Engenheiro de Software - Inoa Sistemas
+### Desenvolvedor Backend - Inoa Sistemas
 #### 09/2023 - 05/2025
 
 - Migração de sistemas on-premises para um modelo de plataforma SaaS.
@@ -42,25 +42,24 @@ Desenvolvedor full stack com enfoque em backend. Interessado em negócios para a
 - Mentor do desenvolvimento técnico de 3 juniores.
 - Responsável por 4 aplicativos.
 
-### Engenheiro de Software - Buser Brasil
+### Desenvolvedor Full Stack - Buser Brasil
 #### 03/2021 - 05/2023
 
 - Desenvolvimento em Vue e Django.
 - Segregação de projeto em Django de monolito para microserviços.
 - Migração de aplicativo Vue para Flutter usando Dart.
-- Sistema de monitoramento e observabilidade, utilizando Honeycomb, Sentry e Grafana.
+- Implementação de sistema de observabilidade e monitoramento com Honeycomb, Sentry e Grafana, reduzindo erros em 90%.
 
 
 ### Estagiário em Consultoria Estratégica - Signals Analytics (Intercâmbio em Israel)
 #### 08/2020 – 02/2021
 
-- Projetos de consultoria para empresas S&P 500 de bens de consumo americano.
-- Modelagem de dados, pesquisa de mercado, criação e apresentação de decks em .ppt.
-- Trabalho 100% em inglês.
+- Projetos de consultoria para empresas S&P 500 de bens de consumo dos EUA.
+- Modelagem de dados, pesquisa de mercado e análise de negócios, incluindo marketing e recomendações de novos produtos.
 
 ## Educação
 ### Engenharia Química - Universidade Federal do Rio de Janeiro  
 #### 2013 - 2019
 
 ## Principais Habilidades
-Python • Django • APIs REST / GraphQL / SOAP • PostgreSQL • SQL • Redis • SQL Server • Microsserviços • Arquitetura • Clean Architecture • Desenvolvimento de APIs • Filas e Mensageria • RabbitMQ • Observabilidade • Grafana • Cloud • AWS • SaaS • DevOps • CI/CD • Docker • Kubernetes • Linux • Nginx • Segurança • Otimização de Performance • Sistemas Distribuídos • Vue.js • React • JavaScript • TypeScript • Jest • Testes (unitários, integração e regressão) • TDD • Metodologias Ágeis • Inglês • Português • Espanhol • Git • HTML • CSS • Flutter • Dart • Nest • Express • MongoDB • Prometheus • Containers • Programação Orientada a Objetos • Padrões de Arquitetura • Programação Assíncrona • Celery • Banco de Dados Relacional
+Python • Django • APIs REST / GraphQL / SOAP • PostgreSQL • SQL • Redis • SQL Server • Microsserviços • Arquitetura • Clean Architecture • Desenvolvimento de APIs • Filas e Mensageria • RabbitMQ • Observabilidade • Grafana • Cloud • AWS • SaaS • DevOps • CI/CD • Docker • Kubernetes • Linux • Nginx • Segurança • Otimização de Performance • Sistemas Distribuídos • LangGraph • LLMs • OpenAI • Claude • Engenharia de Prompts • Agentes de IA • WebSockets • Vue.js • React • JavaScript • TypeScript • Jest • Testes (unitários, integração e regressão) • TDD • Metodologias Ágeis • Inglês • Português • Espanhol • Git • HTML • CSS • Flutter • Dart • Nest • Express • MongoDB • Prometheus • Containers • Programação Orientada a Objetos • Padrões de Arquitetura • Programação Assíncrona • Celery • Banco de Dados Relacional
