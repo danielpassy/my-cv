@@ -1,0 +1,935 @@
+
+
+O Dotorri gostaria de ver as regras individualmente no sentry tracing.
+Redis talvez polua as pouco as coias.
+
+
+
+
+1 - Criar dash automático com as métricas da instalação na medida que subirmos uma instalação com at-docker
+	estilo machine resources - containers
+	estilo machine resource
+	validar portainer.
+
+2 - Adicionar o log rotate no at-install
+
+- Botar o scheduled test bdd pra rodar 4 vezes entre 9 da manhã e 10 da noite.
+- Identificar quem quebrou o teste bdd e cobrar pra corrigir.
+- Navi vai atualiazr a noite, ativar o job
+- Tutorial como pesquisar sua query
+- Ajeitar o card de AT - Logging
+	-- Consegue mandar logs pro cloudwacth
+	-- Consegue filtrar por tipo de logs
+	-- Consegue verificar qual nome de logs é (important/ect)
+	-- Consegue criar novos logs arbitráriamente
+	-- Integração Grafana
+	-- Consegue filtrar por tipos de logs
+	-- Consegue agrupar logs de um cliente (pragma-prod) 
+
+
+Pheonix
+	10: 
+		Várias tasks não estão sendo feitas, todas estão assinaladas pro brent, bill vai pro brent pra ver qual foi.
+		brent é interrompido a cada 5s pra ajudar alguém
+		bill fala pra ele não ajudar ngm, quem quier ajuda vai ter que pedir permissão pro wes, qualquer coisa fala que o ibll mandou	
+		Planejam um processo onde engenheiro l3 colaborarão com brent para sanar e documentar problemas
+	11:
+		Patty fala que o processo de mudança é inútil pq só 40% das tarefas foram completadas, e ai o sistema não contava com isso virou um caos.
+		3 pessoas trabalhand ofull time nisso
+		não eram completadas pq o mundo é caótico - normal -, e também pq o brent não tava disponível
+		se lembra do erik falando que WIP é uma das raizes de não terminar 
+		tenta substituir o brent por 3 engenheiros e processo pra que tudo que dependa do brent seja mapeado.
+	12
+		deploy do phoenix é um desastre, tudo vai sendo ajeitado na medida que via acontecendo.
+		problemas de versionamento, de comnicação. Patty fica responsável por coordenar tudo.
+		Manda email falando pro Steven e outros que vai dar ruim pa caralho
+		Steven fala que a depender da Sarah, sarah fala pra ir anyway.
+		pensam em reverter, mas já era. 
+		A migra~çao do banco vai durar até terç
+		O sistema está fora em tudo
+		deu uns ruins jurídicos com dados de cartão sendo vazados
+	13:
+		steve cheg ae fala que quer falar com geral
+		reduz a frequência de mudanças de código + só permite commits de fix.
+		auditores tão no prédio e tem que distrair eles
+		se livrar de todos os dados de cartão de c´reidot.
+		não da o relatópri que os adutiores pedem - primeira vez que ele diz não
+		recebe engenheiros do John pra ajudar-  trabalhando cm eocnjunto com dev e segurança
+	14:
+		segunbda feira de noite a situaçõa da uma estabilizadfa.
+		terça ele vai falar com steve que tá puto, bate boca comele,  fala que vai outrsource dev/security/it se não rolar uma mudança em até 90 dias.
+		Fala com CHris de Dev
+		Crhis fala que falou com a sarah uma previsão de quando ia ficar pronto e pede desculpas.
+		Ele também fala que 
+		Chris convida Bill e geral de TI pruma festa, mas TI ainda tá apagando fogo. Wes fica puto mas Bill acha que é importante faze risso no futuro pra ter uma relação boa com eles.
+
+
+
+
+
+AT - Docker
+	Done:
+		- Ajeitar pipeline para deletar e recriar a pasta Alphatools toda vez
+			- Infra
+		- Criar 5 ambientes no at_demo_lab
+			- Infra
+		- Por no ALB os 5 IPs/portas
+			- Victor
+			- Escolher 5 domínios e 5 portas e mandar.
+		- Criação do pipeline pros devs fazerem deploys no at_demo_lab (NÂO AT_DEMO) Alphatools
+			- Infra
+
+	- Ajeitar no IaC pra subir uma máquina pequeninha windows pra subirmos os módulos AT
+		- Victor
+		- Menos spec possível
+		- nome: at windows cars
+	- Adicionar os módulos service bus no generate_docker-compose 
+		- Infra
+	- Verificar o acesso ao HUB 
+		- Infra
+
+
+
+
+
+
+Watcher demorando MUITO:
+	watcher_fullobjectmodel tá mais com mais de uma entrada por  (object_content_type_id, object_id)
+	Descobrir a origem do bug e consertar.
+	fazer um data migration
+
+	query que comprovate:
+		SELECT object_content_type_id, object_id, COUNT(*) AS count
+		FROM dbo.watcher_fullobjectmodel
+		GROUP BY object_content_type_id, object_id
+		HAVING COUNT(*) > 1;
+
+
+	Filter with temp table.
+		Ao que parece a query não roda no SQLSERVER 2022.
+		pegar a query do Pedro, ver se ela continua quebrando, se qeubrar, que bom.
+
+Isolationstudy:
+
+	atomic:
+		undergoing
+	snapshot:
+		como migrar?
+		mudar o default e pr
+		Riscos:
+			Mudar de read commited -> snapshot isolation causa erro. (o contrário não é vdd)
+		COmo por default?
+			SnapshotIsoaltion -> Já é.
+			Minha função a nível view -> pode-se por.
+
+	READCOMMITTEDLOCK 
+	 Link interessante
+	 Monitor de performance.https://learn.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-locks-object?view=sql-server-ver16
+
+
+	Estudo do isolamento atomico:
+		Objetivo:
+			reduzir views/celery/crons rodando dentro d'algo assim.
+			Fazer com que novos endpoints sejam, por default, não dentro de uma transação.
+			Ajudar os devs a entenderem o que se trata isso.
+		
+		Como identificar se estamos dentro de uma transação?
+
+		Roda dentro de transação?
+			View
+				sim,  -- assettools\common\frontend\request_utils.py
+			Dajaxice:
+				Sim, via assettools\common\frontend\request_utils.py:ajax_register
+			Celery
+				Não é.
+			Cron/comando
+				Não é.
+			async_call
+				não é.
+
+		secondarydbconnection
+			 -> pode ser a solução padrão.
+			 -> precisamos entender os outros modos.
+
+		Tem porquê? 
+			Tem, parece que tudo roda dentro da transação mesmo.
+
+		The usual way to start a transaction is to turn autocommit off.
+
+
+Migração POSTGRES:
+	Fazer organzaição do POSTGRES>
+	Responder aqui:
+		https://inoa.zendesk.com/agent/tickets/30416
+		Falar o que cnversamos resumdiamente
+
+		testes
+
+		198K ./assettools/backend/liabilities/features/liabilities-steps.py
+		118K ./assettools/backend/compliance/features/compliance-steps.py
+		 74K ./assettools/frontend/trading/features/trading-steps.py
+		 71K ./assettools/backend/execution/features/execution-steps.py
+		 68K ./assettools/frontend/otc_agreements/features/otc_agreement-steps.py
+		 57K ./assettools/backend/portfolio/features/portfolio-steps.py
+		 45K ./assettools/backend/lending/features/lending-steps.py
+		 43K ./assettools/backend/fund_assets/features/fund-assets-steps.py
+		 28K ./assettools/backend/corporate_actions/features/corporate_actions-steps.py
+		 26K ./assettools/backend/funds/features/fund-fee-steps.py
+		 20K ./assettools/integration/bbg/features/bbg-steps.py
+		 14K ./assettools/backend/accounting/features/accounting-steps.py
+		9.2K ./assettools/backend/indices/features/indices-steps.py
+		4.5K ./assettools/integration/bvmf/features/bvmf-steps.py
+
+	Jeito manual-
+		https://wiki.postgresql.org/wiki/Microsoft_SQL_Server_to_PostgreSQL_Migration_by_Ian_Harding
+
+	AWS Schema Conversion Tool:
+		report feito.
+		99.9% de migração de schema.
+		Problemas:
+			1 -  PostgreSQL doesn't support clustered indexes
+
+
+
+	Django:
+
+		env\Lib\site-packages\django\db\backends\ddl_references.py:194 -> onde é definido o query.
+		constraint é definida pela classe ForeignKeyName
+		user_management_userpreference_user_id_d9faa35d_fk_auth_user_id
+
+
+
+		sqlserver: futures_futuretype_liquidation_settlement_id_274cda6c
+		postgresl: futures_futuretype_liquidation_settlement_id_274cda6c
+
+		instruments_instrumentacceptancelimitsbyfundgroup:
+			instruments_instrumentacce_instrument_id_0c6bc321	
+			instruments_instrumentacce_fund_group_id_be016a1e	
+			instruments_instrumentacceptancelimitsbyfundgroup_pkey	
+
+			instruments_instrumentacceptancelimitsbyfundgroup_fund_group_id_be016a1e_fk_instruments__fundgroup_id
+			instruments_instrumentacceptancelimitsbyfundgroup_instrument_id_0c6bc321_fk_instruments_instrument_id
+
+			instruments_instrume_fund_group_id_be016a1e_fk_instrumen
+			instruments_instrume_instrument_id_0c6bc321_fk_instrumen
+
+
+
+		
+
+		:futures_futuretype
+			futures_futuretype_liquidation_settleme_274cda6c_fk_currencie	
+			futures_futuretype_settlement_currency__5ad24abb_fk_instrumen	
+			futures_futuretype_underlying_instrumen_91e3ea07_fk_instrumen
+
+			futures_futuretype_liquidation_settlement_id_274cda6c
+			futures_futuretype_settlement_currency_source_id_5ad24abb
+			futures_futuretype_underlying_instrument_id_91e3ea07
+
+	sqlserver2pgsql		
+	dbconvert.com/mssql/postgresql/
+	Pgloader 
+
+	Como o Django chama os indexes quando tem o postgresql vs quando tem o mssql?
+	isso pode ser importante demais, teria que haver uamf erramenta de conversão
+
+
+Pytest GHA:
+	restore bak
+		Instalando sqlcmd pra poder fazer o restore
+		unzip.
+		https://learn.microsoft.com/en-us/sql/connect/odbc/linux-mac/installing-the-microsoft-odbc-driver-for-sql-server?view=sql-server-ver16&tabs=ubuntu18-install%2Calpine17-install%2Cdebian8-install%2Credhat7-13-install%2Crhel7-offline ( Microsoft ODBC 18 p ubuntu)
+		Hardcodei o ip do sql_server pq o host_name "sql_server" tá dando
+		ubuntu@ip-10-93-1-187:~$ sqlcmd -S sql_server -U alphatools -P alphatools
+		lookup sql_server on 127.0.0.53:53: server misbehaving
+		lookup sql_server on 127.0.0.53:53: server misbehaving
+
+
+Otimizações dos database helpers #229	2
+	filter_by_join_with_temp_table.
+		as utiliazções parecem não gastar muito, dificilmente passa de 100ms
+		
+		possíveis começar a usar.
+		assettools\backend\corporate_actions\api.py:check_duplicates
+		assettools\backend\accounting\api.py:set_adjustment_provisions
+		assettools\backend\accounting\api.py:get_collateral_accounts
+	aggregated_date_inner_query
+		ADICIONAR INSTRUMENTAÇÂO - Não da pra saber a query )):, portanto não da pra saber o tempo
+	aggregated_ids_inner_query
+		ADicionar instrumentação - Não da pra saber a query )):, portanto não da pra saber o tempo
+	queryset_to_values_dict
+		Cara, é uma forma de prevenir N+1 no Django ORM, acho difícil melhorar isso.
+	queryset_to_dict
+		Custa basicamente nada.
+		{getattr(obj, key): obj for obj in queryset}
+		é equivalente ao in_bulk()
+	inner_query_alias
+		Não usado
+
+Arquivo:
+Após 1-2, verificar se  aggregated_date_inner_query tem otimização a ser feita.
+	Por explicação para cad aum dos database helpers no card.
+	Mandar ee pra bloqueado enquanto esprar 1-2 dias.
+
+Update do bak jenkins
+	cd C:\bak_files\  
+	curl.exe --fail -u dmpassy:"bbb24uGV:e68Mxz" https://nexus.inoa.com.br/repository/bak-files/bak-for-tests%2Fstable-2024-06-14.zip --output ./stable-06-2024
+	Expand-Archive -Path ./stable-06-2024 -Destination C:\\bak_files -Force
+
+
+ansible:
+	máquinas já existem, pessoas mexem nela, vai criar especifidades pra essas máquinas ou elas vão ser na mão e novas ansible+terraform
+
+	como será executado? fazer na mão garante que não há histórico.
+	A nível de a clientes que a gente provisiona a infra e.g. sámerica, terraform + ansible da pra fazer o processo a nível 99%? Abrir portas, prover 2 máquinas, redes, banco.
+
+	garantir maleabilidade entre clientes diferents.
+
+
+Downgrade Itaverá:
+
+	Proxs passos:
+		Pegar o código que tá rodando em prod e criar um ambiente na minha máquina
+		Pegar um bak 23.2 e deixar idêntico, ou quase, à itaverá.
+		reverter as migrações!	
+
+
+	Vamos verificar migs:
+		7 apps:
+			Accounting: 1 mig imp assettools/backend/accounting/migrations/0032_auto_20230310_1115.py
+			Execution: 1 mig imp assettools/backend/execution/migrations/0091_auto_20230103_1533.py
+			Funds: 2 mig imp assettools/backend/funds/migrations/0175_auto_20230320_1146.py + assettools/backend/funds/migrations/0173_fund_liabilities_start_date.py
+			Integ Store: 2 mig assettools/backend/integration_store/migrations/0027_auto_20230227_1644.py assettools/backend/integration_store/migrations/0029_auto_20231020_0048.py
+			liabilities: 5 migs (...)
+			easy - deleção de job. bbg: 1 mig assettools/integration/bbg/migrations/0007_delete_remove_fix_erros_job.py
+			easy - deleção de job. bmvf: 1 mig assettools/integration/bvmf/migrations/0014_exclude_get_bvmf_future_price_job.py
+
+
+
+	migs não tem:
+		accounting 36
+		execution 92
+		funds 79 80
+		liabilities 111, 112, 113, 114
+		integration_store 29
+
+
+
+	Modificações:
+		assettools/backend/liabilities/admin.py - só opções de ADM, nada que mude muito
+		api.GetShareholdersApi:503 -> parece ser adição de filtro
+				Ticket.is_historical
+
+		assettools\backend\liabilities\api.py:1374 -> var não usada.
+
+		assettools\backend\liabilities\api.py:2553 -> nova forma de desconsiderar .. uma posição?
+		assettools\backend\liabilities\api.py:get_position retorna uma 
+
+
+		GetApplicableTaxRulesByInvestorAccountForPeriodApi -> mudança dificil de apontar se teve mudança de fato.
+			https://github.com/inoa/alphatools-main/commit/b8fb5ab83f05e7dde66fce32fd01ec146c897ad9
+
+
+
+UV:
+	ok - Garantir que install funcione
+		env_base.init
+	ok - garantir que geração download funcione
+	ok - Garantir que jenkins build funcione.
+	ok - pinar dependencias.
+	aidna não - garantir que offline install funciona
+	ok - fazer mod-uwsgi funcionar.
+	ok - não farei - apontar o jenkins pruma pasta com cache do pip install
+	ok - não farei - verificar uv tarpon (3.7)
+	packages inoa https quebraod
+
+
+	
+	botar a validação do requirements no comecinho, evitando rodar outros passos caso esse rode.
+	voltar windows não self-hosted
+	criar card presse débito técnico.
+
+	fazer um if-else e ver se  o validateinoapypi rodar, usar o uv, se não pip
+
+
+
+	intalar uv na global ou na local?
+
+	Como circuvencionar o https de pacotes internos?
+		download via pip
+		installar
+
+	github actions
+	
+	Separar build_env e o install requirements.
+
+
+	Limitações:
+		usar HTTPS com certificado inseguro. - bixar pacotes inoa - contornável
+		pip-compile não gera os specific. - fode no CI que é no windows
+
+
+
+https://www.notion.so/inoa/SVN-Boas-pr-ticas-setup-df6dec935c544aa783ab8a5a94254ce2	
+Responder esse ticket https://inoa.zendesk.com/agent/tickets/27264
+Testando PYtest:
+	watcher sozinho?
+	hotfix-xp?
+
+	https://jenkins-ci.inoa.com.br/job/daniel-testando-pytest/
+	Tem o meu MR aberto que se não existir o job, o BDD não quebra.
+
+
+	# REDUZIR TEMPO DE TESTES
+
+	# BAK GRANDE -> é lento
+	# BDD não é paralelizável
+
+	# DIMINUIR O BAK.
+	# será que da pra excluir itens do bak BDD?
+
+
+
+	# IDEI 1: 
+	# 
+	# Verificar testes que não precisam de muitos dados -> Converter testes pra pytest -> roda no bak pequeno
+
+
+	# IDEIA 2:
+	# DELETA UM MONTE DE PARADA DO BAK GIGANTE(BDD)
+	# método: deleta uma porrada de coisa -> roda os testes (3horas) -> tenta de novo
+
+
+
+	# IDEIA 3: Quais testes usam quais tabelas?
+	# achamos que Fund 95% dos testes usam, Administrator 70%, gestoras, 0%
+	# resultado
+	# todo mundo usa fund -> otimizar fund tlvz.
+	# 
+
+	# tabelas mais usada * tamnaho
+	# 
+
+
+	# IDEIA 4: ir migrando certos testes do BDD bak gigante pro bdd pytest.
+
+
+	# hook -> quais modeis foram usados.
+	# hook2 -> quais ids de quais modeis foram
+	
+
+
+Testando no GH:
+	OK - Só botar a tag test e rodar o teste.
+	Fazer requisição logo após o queue item e postar se já existir o link.
+	Se não existir, postar comentário pra por outra tag.
+		essa função: https://stackoverflow.com/questions/45472604/get-jenkins-job-build-id-from-queue-id
+
+	GA -> trigga o Jenkins -> O jenkins guarda referencia do PR -> No final o jenkins trigga o GA com fail/sucess permitindo o MERGE.
+	COm permitir um merge emergencial?
+	@DanielPassy Pode ter uma tag "skip-test" para esses casos de emergência
+	Atualizar o Notion + Falar pra galera!
+	e no final a pessoa vai receber email. (será msm?)
+
+Update 3.9.13 schroders
+	falta ajitar o create_env.bat
+	falta botar o virtualenv no pacote.
+	falta testar offline.
+
+
+Experimentação com selfhosted:
+	Da pra rodar um workflow que nem fazia no jenkins, do neyda 
+		só ir em actions, selecionar branch e rodar
+	Qualquer pessoa pode rodar?
+		pode.
+	Mas permissão pra  a pessoa apenas rodar, não commitar, ler código?
+		Até da, publicar num outro repositório a ação e a pessoa pode rolar dali
+	Da pra por uma variáveis de input, tipo, build pra qual branch, qual commit diff?
+		da.
+	Cacheamento:
+		out of the box, lindamente feito. Primitivos legais, inclusive de arquivos
+	artefatos 
+		upload, download, compartilha ntre jobs
+
+	testando cache do python:
+		primeiro run 1:20
+		segundo run 16s
+
+	detalhes:
+		Pra setar o python, tem que por power shell 7.
+	 		
+Github
+
+	configs no manage/configure/
+
+	Github
+	
+
+	Credencias: inoa-mgirardin
+	O que é manage hooks?
+
+
+	It looks super easy when everything is in the same repo.
+	piloto:
+		como jenkins identifica que é um jenkins jobs?
+		Onde essa coniguração é feita?
+
+
+
+	Abrindo um parentesis: 
+		Será quem mudando o redirect já funciona alguma ocisa?
+		Esperar a galera de DevOps responderem pra continuar.
+
+
+	ideias:
+		testar fora da VPN
+
+
+Apresentação:
+	- Sentry Performance
+	    /negociacao/ordens/
+	    - Fala que não afeta performance.
+	- Pytest
+	- Envio de pacotes
+	      - Instala dependencias para offlines
+	      - Mais seguro. deleta por padrão
+	- Tipagem
+	    - API docs em sync
+	    - calls.sync e call.async com autocomplete
+	- Release Branch
+
+encryptar SChroders:
+
+	No str_from_env, eval_from_env deve haver uma lógica de decryptação.
+	A encryptação vai ocorrer com uma chave em 2 lugares:
+		INOA_KEY - hardcoded em um lugar
+		Client_key - settings_before
+	No load dos settings, se tiver @SECRET_, desencryptar.
+	at set_secret {secret_name}
+		input do valor
+		confirmação do valor.
+	Salvar numa pasta oculta em root, num arquivo sem extensão clara, quue o leitor de texto não entenda.
+
+
+	fazer um Manual:
+		- Dar uma possibilidade deles setarem secrets novos
+		- get_secret deve ser uma função não exposta ao cliente. (não no manual)
+
+
+	fluxograma do cliente:
+		fazer backup do settings_local.
+		abrir settings_localas
+		pegar database_url
+		transformar o valor por @SECRET_databaseURL
+		rodar o comando at set_secret databaseURL
+		pedirá o valor
+		rodar comando admin restart.bat
+		vrau, show. 
+
+
+
+Settings Schroders:
+	se não tiver setado dirieto, quebra.
+		eval_from_env
+		str_from_env
+    Usar get_secret e ver que tá okay
+    	eval_from_env
+
+    Setar um secret já setado e ver que substituiu ok
+    Setar um segredo, rodar aplicação e verificar que o segredo está okay
+    Usar get_secret num secret que não existe.
+    Adicionar um settings com /@SECRET_, não usar set_secret e ver se ele da um output de erro.
+    Verificar que o arquivo não abre com bloco de notas
+
+
+Instrumentar:
+	ok - sync_call
+	async_Call
+	api.py -> talvez usar no required_permission
+	InoaApi.call (ele não é sobreescrito na teoria.)
+	adicionar 300 span, ve o overhead que isso causa
+
+
+	upgrade celery para instrumento:
+		tirei flags.
+
+	
+Sobre criar build com os sites-packages
+	Não quero mexer no sistema de packages, vou fazer um download-windows.bat no requirements.bat
+
+	Talvez só fazer pip download --destination path -r requirements.
+	E depois pip install
+	pip install --no-index --find-links /path/to/download/dir/ -r requirements.txt
+	Parece que "--no-index --find-links /path/to/download/dir/" poderia ser um optinal flag no windows.bat
+
+	tá, beleza, mas agora entender quais pacotes podem ter problemas de dependencia.
+	
+	https://medium.com/@amimahloof/how-to-package-a-python-project-with-all-of-its-dependencies-for-offline-install-7eb240b27418
+
+	How to tell pip to stop trying to connect to remote?
+	I'm using -f flag to tell where the packages are, but it's still trying to connect non stop.
+	WARNING: Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x0000029C070CC148>: Failed to establish a new connection: [Errno 11001] getaddrinfo failed')': /repository/pypi-all/simple/pysaml2/
+
+
+Metadados:
+
+	Excluir arquivos da pasta assettools (atenção! neste caso é necessário usar um pacote completo, sem diff, e criado com o módulo process usado nesta instalação)
+	Após mudar a versão (executado sobre a base de código da versão selecionada)
+
+	Executar migrações (m migrate)
+
+	Atualizar arquivos estáticos (m collectstatic)
+
+	Atualizar dependências (requirements\windows.bat)
+
+	Permitir upgrade de versão (allowupgrade)
+
+pytest:
+	https://pytest-django.readthedocs.io/en/latest/database.html#testing-transactions
+
+	será que temos que override atomic transactions?
+		esse link aqui ajdua https://pytest-django.readthedocs.io/en/latest/database.html#django-db-modify-db-settings
+
+Verificando se o purge deu certo.
+	from inoa.contrib.chronograph.models import Log
+	from datetime import datetime, timedelta
+	Log.objects.filter(end_date__lte=datetime.now() - timedelta(days=90), stdout="").count()
+
+Testando o decompress/compress automático:
+	- Se o banco tiver:
+		se tiver,
+			M2M/add/delete/update?
+		se não tiver,
+			M2M/add/delete/update?
+
+Remover o logging do Profiler
+	
+	Reverter pros testes pararem de falhar.
+	Corrigir localmente.
+
+Task gravando dados da versão no banco:
+	hash da versão: 1b4f3fe3692 
+	autor: MBB Marcio Bernardes 
+	data do commit: 30 de Agosto de 2023 às 16:48  
+	por dentro do commons/backEnd.
+	Após o update + além do migrate.
+	modelo Metadados
+	secundário:
+		Procurar se já há teste
+
+	Não é possível usar pytest com DB por conta do isolamento snapshot.
+	Opções:
+		Descobrir onde ocorre esse isolamento e
+			a) atrasa-lo
+			b) cancela-lo -> ruim, pq muita coisa depende dele.
+		Abrir uma nova transação e realizar as migrações
+			a) 		
+
+
+	Adicionar o branch.
+	Fazer testes com o .bak de prod.
+
+Task bug compressão da tabela watch:
+	from django.db import connection
+	connection.sql_server_version()
+	O modelo ModelAuditEntry/ serve de diff de modificações entre outros modelos.
+	FullObjectModel 
+	Ele tem 2 campos principais:
+		diff e compressed_diff. COm
+
+Task Expurgo automático de tabelas:
+	Preciso saber como eu descubro o que pode ser deletado.
+	É criado 
+
+	Regras:
+		Cabe a definição do que pode ser deletado
+		Apenas nas 3 tabelas apontadas 
+	Outcome: 
+		Comando que limpe tabelas
+		Agendado no cron
+
+
+Arquivo:
+	Estudo lib nova vs antiga
+		Estudo lib antiga vs lib nova
+			Problemas
+			   Primary key não sendo tipo clustered, o que é isso?
+			      Clustered index é um tipo de index que ordena a tabela, fisicamente, portanto unico por tabela. Primary key apenas enforça o unique, porém não diz nada de unique. Normlamente primary key e clustered index vem juntos, mas não necessariamente.
+
+			      Onde é que tem? apenas 4.
+			         accounting_provision
+			         accounting_provisioninstallment
+			         instruments_price
+			         liabilities_performancefee
+
+			   Tem uns indexes com name: null, porém eles tem index_id, mas que não parecem consistente.
+			      2 indexes só:
+			         'accounting_provisioninstallment'
+			         'instruments_price'
+
+
+			Testes:
+			   Novo app, lib antiga e lib nova.
+			   unique_together
+			   index_together
+			   primary_key
+			   m2m
+
+
+			   teste 1: index_together and unique_together
+			      código:
+			         # Create your models here.
+			         class NOVA_LIB(models.Model):
+			             oi = models.TextField()
+			             oi2 = models.TextField()
+
+			             tchau = models.TextField()
+			             tchau2 = models.TextField()
+
+			             class Meta:
+			                 index_together = [
+			                     ('oi', 'oi2')
+			                 ]
+			                 unique_together = ['tchau', 'tchau2']
+
+
+
+			      lib nova:
+			         BEGIN TRANSACTION
+			         --
+			         -- Create model NOVA_LIB
+			         --
+			         CREATE TABLE [testando_db_nova_lib] 
+			            (  [id] int NOT NULL PRIMARY KEY IDENTITY (1, 1), 
+			               [oi] nvarchar(max) NOT NULL, 
+			               [oi2] nvarchar(max) NOT NULL, 
+			               [tchau] nvarchar(max) NOT NULL, 
+			               [tchau2] nvarchar(max) NOT NULL);
+			         
+			         -- (NÂO TEM) ALTER TABLE [testando_db_nova_lib] 
+			            CREATE UNIQUE INDEX 
+			               [testando_db_nova_lib_tchau_tchau2_c606e406_uniq] ON [testando_db_nova_lib] ([tchau], [tchau2]) WHERE [tchau] IS NOT NULL AND [tchau2] IS NOT NULL;
+			            CREATE INDEX 
+			               [testando_db_nova_lib_oi_oi2_d6c2875f_idx] ON [testando_db_nova_lib] ([oi], [oi2]);
+			         COMMIT;
+
+			      lib velha:
+			         BEGIN;
+			         --
+			         -- Create model NOVA_LIB
+			         --
+			         CREATE TABLE [testando_db_nova_lib] 
+			            (  [id] int IDENTITY (1, 1) NOT NULL PRIMARY KEY,
+			               [oi] nvarchar(max) NOT NULL,
+			               [oi2] nvarchar(max) NOT NULL,
+			               [tchau] nvarchar(max) NOT NULL,
+			               [tchau2] nvarchar(max) NOT NULL);
+			         
+			         ALTER TABLE [testando_db_nova_lib] 
+			            ADD CONSTRAINT   
+			               [testando_db_nova_lib_tchau_tchau2_c606e406_uniq] UNIQUE ([tchau], [tchau2]);
+			            CREATE INDEX 
+			               [testando_db_nova_lib_oi_oi2_d6c2875f_idx] ON [testando_db_nova_lib] ([oi], [oi2]);
+			         COMMIT;
+			   teste 2: pk
+			      código
+			         class TESTANDO_CARALHO(models.Model):
+			            referencia_a_nova_lib = models.ForeignKey('NOVA_LIB', on_delete=models.CASCADE)
+
+			      lib nova
+			         BEGIN TRANSACTION
+			         --
+			         -- Create model TESTANDO_CARALHO
+			         --
+			         CREATE TABLE [testando_db_testando_caralho] 
+			            (  [id] int NOT NULL PRIMARY KEY IDENTITY (1, 1), 
+			               [referencia_a_nova_lib_id] int NOT NULL);
+			         ALTER TABLE [testando_db_testando_caralho] 
+			            ADD CONSTRAINT [
+			               testando_db_testando_caralho_referencia_a_nova_lib_id_8e795b06_fk_testando_db_nova_lib_id] FOREIGN KEY ([referencia_a_nova_lib_id]) REFERENCES [testando_db_nova_lib] ([id]);
+			            CREATE INDEX [
+			               testando_db_testando_caralho_referencia_a_nova_lib_id_8e795b06] ON [testando_db_testando_caralho] ([referencia_a_nova_lib_id]);
+			         COMMIT;
+			      lib velha
+			         BEGIN;
+			         --
+			         -- Create model TESTANDO_CARALHO
+			         --
+			         CREATE TABLE [testando_db_testando_caralho] 
+			            (  [id] int IDENTITY (1, 1) NOT NULL PRIMARY KEY, 
+			               [referencia_a_nova_lib_id] int NOT NULL);
+			         ALTER TABLE [testando_db_testando_caralho] 
+			            ADD CONSTRAINT [
+			               testando_db_testando_caralho_referencia_a_nova_lib_id_8e795b06_fk_testando_db_nova_lib_id] FOREIGN KEY ([referencia_a_nova_lib_id]) REFERENCES [testando_db_nova_lib] ([id]);
+			            CREATE INDEX [
+			            testando_db_testando_caralho_referencia_a_nova_lib_id_8e795b06] ON [testando_db_testando_caralho] ([referencia_a_nova_lib_id]);
+			         COMMIT;
+			   teste 3: m2m
+			      código
+			         class TESTANDO_CARALHO(models.Model):
+			             referencia_a_nova_lib = models.ForeignKey('NOVA_LIB', on_delete=models.CASCADE)
+
+			         class Testando_pacas(models.Model):
+			             referencia_m2m = models.ManyToManyField('NOVA_LIB')
+
+
+
+			      lib nova:
+			         BEGIN TRANSACTION
+			         --
+			         -- Create model Testando_pacas
+			         --
+			         CREATE TABLE [testando_db_testando_pacas] (
+			            [id] int NOT NULL PRIMARY KEY IDENTITY (1, 1));
+			         CREATE TABLE [testando_db_testando_pacas_referencia_m2m] (
+			            [id] int NOT NULL PRIMARY KEY IDENTITY (1, 1), 
+			            [testando_pacas_id] int NOT NULL, 
+			            [nova_lib_id] int NOT NULL);
+			         ALTER TABLE [testando_db_testando_pacas_referencia_m2m] 
+			            ADD CONSTRAINT [
+			               testando_db_testando_pacas_referencia_m2m_testando_pacas_id_ba515f56_fk_testando_db_testando_pacas_id] FOREIGN KEY ([testando_pacas_id]) REFERENCES [testando_db_testando_pacas] ([id]);
+			            ADD CONSTRAINT [
+			               testando_db_testando_pacas_referencia_m2m_nova_lib_id_292e84c2_fk_testando_db_nova_lib_id] FOREIGN KEY ([nova_lib_id]) REFERENCES [testando_db_nova_lib] ([id]);
+			            CREATE UNIQUE INDEX [
+			               testando_db_testando_pacas_referencia_m2m_testando_pacas_id_nova_lib_id_1a895c7d_uniq] ON [testando_db_testando_pacas_referencia_m2m] ([testando_pacas_id], [nova_lib_id]) WHERE [testando_pacas_id] IS NOT NULL AND [nova_lib_id] IS NOT NULL;
+			            CREATE INDEX [
+			               testando_db_testando_pacas_referencia_m2m_nova_lib_id_292e84c2] ON [testando_db_testando_pacas_referencia_m2m] ([nova_lib_id]);
+			            CREATE INDEX [
+			               testando_db_testando_pacas_referencia_m2m_testando_pacas_id_ba515f56] ON [testando_db_testando_pacas_referencia_m2m] ([testando_pacas_id]);
+			         COMMIT;
+			      lib velha
+			         BEGIN;
+			         --
+			         -- Create model Testando_pacas
+			         --
+			         CREATE TABLE [testando_db_testando_pacas] (
+			            [id] int IDENTITY (1, 1) NOT NULL PRIMARY KEY);
+			         CREATE TABLE [testando_db_testando_pacas_referencia_m2m] (
+			            [id] int IDENTITY (1, 1) NOT NULL PRIMARY KEY, [testando_pacas_id] int NOT NULL, [nova_lib_id] int NOT NULL);
+			         ALTER TABLE [testando_db_testando_pacas_referencia_m2m] 
+			            ADD CONSTRAINT [
+			               testando_db_testando_pacas_referencia_m2m_testando_pacas_id_ba515f56_fk_testando_db_testando_pacas_id] FOREIGN KEY ([testando_pacas_id]) REFERENCES [testando_db_testando_pacas] ([id]);
+			            ADD CONSTRAINT [
+			               testando_db_testando_pacas_referencia_m2m_nova_lib_id_292e84c2_fk_testando_db_nova_lib_id] FOREIGN KEY ([nova_lib_id]) REFERENCES [testando_db_nova_lib] ([id]);
+			            ADD CONSTRAINT [
+			               testando_db_testando_pacas_referencia_m2m_testando_pacas_id_nova_lib_id_1a895c7d_uniq] UNIQUE ([testando_pacas_id], [nova_lib_id]);
+			            CREATE INDEX [
+			               testando_db_testando_pacas_referencia_m2m_testando_pacas_id_ba515f56] ON [testando_db_testando_pacas_referencia_m2m] ([testando_pacas_id]);
+			            CREATE INDEX [
+			               testando_db_testando_pacas_referencia_m2m_nova_lib_id_292e84c2] ON [testando_db_testando_pacas_referencia_m2m] ([nova_lib_id]);
+			         COMMIT;
+
+
+			tem 62 entradas em models.py contendo unique_together.
+			Será que existem 62 constraints + indexs com o nome '_uniq'? Se tiver, legal, poderiamos avaliar isso.
+			   local tem 289 idx + contraints
+			   neo tem 291 idx + contraints
+			   tem 165 indexes... só 165 indexes, lol.
+			       124 contraints
+
+
+			Eu não consegui identificar ainda as diferenças, pq não consigo identificar direitinho quais contraints vs quais index são gerados a partir dessa diff.
+			To tentando idnetificar onde é que gera esse uniq além desse index, pra ver se ocnsigo excluir, mas... ainda não.
+
+
+			No neo tem umas tabelas bulk_update
+
+			   "bulkupdate_0J4CXLJW85":{
+			      "constraints":[
+			         
+			      ],
+			      "indexes":[
+			         {
+			            "name":null,
+			            "index_id":0,
+			            "is_unique":false,
+			            "is_primary_key":false,
+			            "is_unique_constraint":false
+			         }
+			      ]
+			   },
+			   "bulkupdate_1BEBLKJXN4":{
+			      "constraints":[
+			         
+			      ],
+			      "indexes":[
+			         {
+			            "name":null,
+			            "index_id":0,
+			            "is_unique":false,
+			            "is_primary_key":false,
+			            "is_unique_constraint":false
+			         }
+			      ]
+			   },
+
+
+
+
+			tem uns indexes _new
+
+			NEO:
+			   "watcher_modelauditentry":{
+			      "constraints":[
+			         {
+			            "constraint_name":"watcher_modelauditentry_object_content_type_id_a77366f9_fk_django_content_type_id_new",
+			            "constraint_type":"FOREIGN KEY"
+			         },
+
+
+
+			LOCAL:
+			   "watcher_modelauditentry":{
+			      "constraints":[
+			         {
+			            "constraint_name":"watcher_modelauditentry_object_content_type_id_a77366f9_fk_django_content_type_id",
+			            "constraint_type":"FOREIGN KEY"
+			         },
+			         {
+
+
+			Resolvendo problema específico da Neo.
+			   Como resolver?
+			   Tá tentando dropar um contraints que não existe, ela existe sob a forma de index.
+			   Então, para funcionar
+			      a) Criar a contraints, de preferência uma dummy, que não aplique nada.
+			         "CONSTRAINT DummyCheckConstraint CHECK (1 = 1)"    
+			      b) Dropar o index.
+			      c) Dropar a contraints.
+
+			   Com a lib nova:
+			      BEGIN TRANSACTION
+			      --
+			      -- Alter unique_together for provisioninstallment (0 constraint(s))
+			      --
+			      ALTER TABLE [accounting_provisioninstallment] DROP CONSTRAINT [accounting_provisioninstallmen_provision_id_4aea4f9c_clust_uniq];
+			      COMMIT;
+
+			   
+			   com a lib antiga:
+			      BEGIN;
+			      --
+			      -- Alter unique_together for provisioninstallment (0 constraint(s))
+			      --
+			      DROP INDEX [accounting_provisioninstallmen_provision_id_4aea4f9c_clust_uniq] ON [accounting_provisioninstallment];
+			      COMMIT;
+
+
+			deploy 
+
+
+			Pois bem, pra ajeitar tudo, a lib nova gera unique_index, a lib antiga gera contraints.
+			Se a gente usar a lib nova, vamos criar um monte de unique index
+			A lib velha, vai ter contraints.
+
+			1 - gera-se a lista de unique-index.
+			2 - pega a lista de constraints.
+
+			ALTER DATABASE alphatools_prod
+			SET ALLOW_SNAPSHOT_ISOLATION ON;
+
+
+---
+
+Observabilidade:
+- Configurei alarmes no Grafana com Prometheus e InfluxDB para monitoramento de performance e alertas em produção.

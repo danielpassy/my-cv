@@ -1,0 +1,1072 @@
+	
+Deploy:
+	tickets:
+		fix/VWS-523/separate-sr-series - procesamiento dicom, para separar intancias sr
+			https://github.com/eva-tech/evapacs-back/pull/5351
+		feature/MIDDLEWARE-252/add-critical-values-in-webhook - agrega critical values a respuesta del webhook middleware
+			https://github.com/eva-tech/eden-middleware/pull/692
+		feature/EVA-9769/billing-ai-product-fee - Allow configuration of AI fee per org.
+			https://github.com/eva-tech/evapacs-back/pull/5379
+		feature/EVA-9462/htmldiff2-fork - Fork de libreria de diff - esto son muchos y muchos y muchos cambios en solo PR.
+			https://github.com/eva-tech/eden-foundation/pull/81
+		feat/EVA-9544/improvement-dicom-processing - nuevo servicio de procesmaiento de instancias
+			https://github.com/eva-tech/evapacs-back/pull/5450
+		feature/EVA-8744/new_field_is_active_in_mgmt_studies - 
+			https://github.com/eva-tech/evapacs-back/pull/5312
+
+
+	para develop:
+		https://edenmed.slack.com/archives/C041K153N12/p1771285812623129?thread_ts=1769698180.836889&cid=C041K153N12
+Study:
+
+
+
+	And vs OR where filtering:
+		And is.. generally much better, with and you reduce the amount of rows, with or you expand, so it's easy, if some side of the filtering is not selective enought, you will have rows explosion in the bitmap heap scan (that happens after a bitmapor). So it's quite quite quite important to be sure that both sides of the or are at least somehow selective. With the OR, limit won't do a good job, cause we'll need to fetch everything with bitmap heap scan, it's not possible to simple stop bitmap heap scan in the frist 20 rows, is a postgresql limitation. So yes.
+		There're others operations that also need to fetch and do everything before moving to next steps, those are the "batch operations" like, materialize, bitmapAnd/bitmapOr, aggregate (like sum), joins. so, if you have a join and you have more than one index, it's going to batch not stream (yes, you can have omposite index sometimes). Postgres generally don't take limit much into account so don't count on that to avoid batch operations
+	We have 3 ways of joining, hash join, merge join and nested loop. merge join is when both tables already sort, read then simultaneously and return 1 by 1. Hash read the whole table, create a hash  and starts semitting, nested loop join is about 
+
+
+	Postgres Index Performance Flashcards
+	Core Concepts
+	Q: What's the fundamental difference between Index Scan and Bitmap Scan?
+	A: Index Scan fetches rows immediately one-by-one (streaming). Bitmap Scan builds a complete list of pages first, then fetches them all in sorted order (batching). This can be bad if limit is present
+
+
+
+	Q: What operations are considered "batching" (non-streaming)?
+	A:
+		Bitmap Heap Scan - must build complete bitmap first
+		BitmapOr / BitmapAnd - must scan all indexes and merge
+		Sort - must see all rows to sort them (unless using index order)
+		Aggregate (GROUP BY, COUNT, SUM) - must process all groups
+		Hash Join - must build complete hash table from inner side
+		Hash Aggregate - must build complete hash table of groups
+		Materialize - buffers complete result set
+		WindowAgg (without partition pruning) - may need full result
+
+	Q: Why does batching kill LIMIT optimization?
+	A: LIMIT wants to stop early. Batching strategies must complete their full work before returning ANY rows, so LIMIT can't stop them early.
+
+	Index Scan vs Bitmap Scan
+	Q: When does Postgres choose Bitmap Scan over Index Scan?
+	A: When expecting MANY rows spread across MANY heap pages. Visiting pages in sorted order once is cheaper than random I/O visiting the same pages multiple times.
+	Q: Why is Index Scan better for small result sets?
+	A: Few rows = few random I/O operations. The overhead of building a bitmap and sorting isn't worth it. Plus it can stop early with LIMIT.
+	Q: Why is Bitmap Heap Scan LIMIT-unfriendly?
+	A: It must scan the entire index, build the complete bitmap, sort all page locations, and read all identified pages. LIMIT cannot stop this process early.
+
+	OR Conditions (The Problem Child)
+	Q: Why are OR conditions problematic for performance?
+	A: Each OR branch typically requires a separate index scan. Results must be merged (BitmapOr), and you can't stop until ALL branches are complete. Wide ORs = many index scans = slow.
+	Q: What makes an OR condition "acceptable"?
+	A: ALL branches must be highly selective (return few rows). If any branch returns many rows, the entire operation becomes expensive.
+	Q: How does BitmapOr work?
+	A: Scans multiple indexes (one per OR branch), builds a bitmap for each, then merges all bitmaps by combining TIDs (tuple identifiers). Must complete ALL index scans before proceeding.
+	Q: What happens if one OR branch is poorly selective?
+	A: That branch's bitmap explodes in size, consuming memory and requiring many heap page fetches. The entire query pays the cost of the worst branch.
+	Q: Can LIMIT optimize a BitmapOr query?
+	A: No. BitmapOr must complete all index scans and merge all bitmaps before ANY rows are returned. LIMIT happens after all this work is done.
+
+	AND Conditions (The Good Guys)
+	Q: Why are AND conditions better than OR for performance?
+	A: ANDs are selective (they narrow results). Postgres can use a single composite index OR use multiple indexes and AND their bitmaps (smaller result set). Each condition filters OUT rows.
+	Q: How does a composite index help AND conditions?
+	A: A composite index on (col1, col2) can satisfy WHERE col1 = x AND col2 = y with a single index scan. No bitmap merging needed.
+	Q: Can AND conditions also use BitmapAnd?
+	A: Yes, but it's better than BitmapOr because: (1) ANDs reduce the result set, (2) the final bitmap is smaller, (3) fewer heap pages to fetch.
+
+	Lossy Bitmaps
+	Q: What is a lossy bitmap?
+	A: When work_mem is exceeded, Postgres switches from tracking individual row TIDs to tracking entire pages. Instead of "rows 1,5,7 on page 10", it becomes "page 10 (somewhere)".
+	Q: Why are lossy bitmaps slow?
+	A: Every row on the marked pages must be rechecked against the WHERE clause. You fetch entire pages and scan them row-by-row, even if only one row matches.
+	Q: When do bitmaps become lossy?
+	A: When the bitmap size exceeds work_mem. Wide ORs, poorly selective conditions, or many matching rows cause this.
+
+	Materialize Node
+	Q: When is Materialize helpful?
+	A: When a SMALL result set is reused many times (like in a nested loop join). The cost of computing once and caching pays off.
+	Q: When does Materialize hurt performance?
+	A: When a LARGE result is materialized. It buffers everything in memory/disk before proceeding. LIMIT cannot stop early, and you pay memory/I/O costs for data you may not need.
+	Q: Why is Materialize LIMIT-unfriendly?
+	A: It computes and stores the ENTIRE result set before returning anything. LIMIT can only apply after materialization is complete.
+
+	LIMIT Optimization Rules
+	Q: What query patterns keep LIMIT working efficiently?
+	A: Streaming execution plans: simple Index Scans, no bitmap operations, no materialize nodes, avoid OR conditions, keep subplans small and selective.
+	Q: What execution nodes break LIMIT optimization?
+	A: Any "must complete before continuing" node: Bitmap Heap Scan, BitmapOr, BitmapAnd, Materialize (large), Aggregate, Sort (without index), Hash Join build phase.
+	Q: How can you diagnose why LIMIT isn't helping?
+	A: Run EXPLAIN ANALYZE. Look for: (1) Bitmap operations, (2) Materialize nodes, (3) "actual rows" = total rows despite LIMIT, (4) sort/aggregate nodes that must see all data.
+
+
+	Quick Reference
+	Streaming (LIMIT-friendly):
+
+	Index Scan
+	Index Only Scan
+
+
+	Seq Scan (streams, but slow)
+
+	Batching (LIMIT-unfriendly):
+
+	Bitmap Heap Scan
+	BitmapOr / BitmapAnd
+	Sort (without index order)
+	Hash Aggregate
+	Aggregate (most cases)
+	Materialize
+	WindowAgg (some cases)
+
+	Key Insight: LIMIT optimization requires the ability to stop early. Any execution node that must "see all data before proceeding" kills this optimization.
+Flash Card 1
+  Q: What is the primary purpose of the InstanceService class?
+  A: It's the main entry point for processing DICOM files - extracts structured data from DICOM files, validates required identifiers, creates/retrieves
+  database objects, and handles integrity errors with retry logic.
+
+  Flash Card 2
+  Q: What does get_instance_file_data return and how is it used?
+  A: Returns a dictionary with instance data and file type ("DCM"). Used by create_update_instance_file() to extract metadata needed for creating
+  InstanceFile records in the database.
+
+  Flash Card 3
+  Q: What are ECG signals in this medical imaging system?
+  A: Electrocardiogram data - electrical activity recordings of the heart stored in DICOM files and processed into structured digital signal data for
+  storage and analysis.
+
+  Flash Card 4
+  Q: How does the system process ECG DICOM files?
+  A: Uses ECG handler library to extract multiple channels (leads) from DICOM, converts analog waveforms to digital signal lists, and stores them as
+  SeriesEcg and SeriesEcgSignal records in the database.
+
+  Flash Card 5
+  Q: What triggers ECG signal generation and what does it enable?
+  A: Triggered when DICOM modality is "ECG" via task_generate_ecg_signals background task. Enables displaying ECG waveforms, heart rhythm analysis, and
+  maintaining full diagnostic information from ECG machines.
+Dados padrão:
+	payload graphene:
+	{
+	  "authorization": "JWT eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVzZXJAZXZhY2VudGVyLmNvbSIsImV4cCI6MTc1NjMwNzY2Niwib3JpZ0lhdCI6MTc1NjIyMTI2Nn0.ZPm3lQtcdXPW74Q9WfFqMebHrHcMbJOd8ORrvEQiKy0",
+	  "organization-id" : "d4928bf-b83f-419c-a315-acbd0b7dabbb"
+	}
+Estudar:
+
+
+	Leer mais sobre o produto. doc que raymundo me mando 
+		https://www.notion.so/evacenter/DOCUMENTACI-N-DE-PRODUCTO-7f61807f918348679cacea380c4be71b
+		doc arch: https://docs.google.com/document/d/1wA9bI8fbbbgCXmIMgtJ-toHYsi5vZgB_CULIScxWnyk/edit?tab=t.0#heading=h.mpdtn6g80yq5
+		study the data modelling (it's on my own page)
+			Estructura de datos:
+			pacs_patients <-(1:n) pacs_studies <-(1:n) pacs_series <-(1:n) pacs_instances <-(1:1) pacs_instance_file
+			/\
+			|_---- pacs_reports <-(1:n) pacs_templates (é um template de um diagnóstico) <- (1:n) pacs_template_fields (campos do template)
+		      			/\                                                                               /\
+						|_________________________________________________________________________pacs_report_fields (valor para subsitutir no template        
+
+			cada pacs_serie pode ter una pacs_modalidad, um studio pode ter vários modalidades
+			pacs_body_parts é agregado a uma série, 
+			pacs_facility é agregado ao pacs_study, é surcursal, filial
+			pacs_organization é a empresa, quase tudo tem ligação com essa. 
+			pacs_measurement são as medidas feitas em cima da imagem, feito pelo médico olhando a imagem
+				pacs_measurement pode ser gerado por AI.
+
+			realmente 1 estudo pode ter apenas 1 report, entretanto é 1:n pois o report pode estar equivocado e pode-se trocar, digo, borra-se um e mantem o outro 
+
+
+			pacs_user(el usuário de django) -> pacs_practioner (o perfil, nome, localizacao, onde trabalha, etc)
+			pacs_organizations_user (para que um usuário tenha varias organizações)
+
+	s3 bucket policy.
+Histórico:
+	testing database queries
+		DATABASE before:
+			aurora-develop-cluster.cluster-cvfjgcgzxpyu.us-east-1.rds.amazonaws.com
+			RDSEvadevelop
+			u7fxmWCIokungCWPoRlisrJeFJCeqht6gFRXGNzN5WCyruyyvco4dC3fABNi
+			5432
+			1200000
+			hompbgmrzwqryhrc
+
+
+			aurora-develop-cluster.cluster-cvfjgcgzxpyu.us-east-1.rds.amazonaws.com
+			RDSEvadevelop
+			u7fxmWCIokungCWPoRlisrJeFJCeqht6gFRXGNzN5WCyruyyvco4dC3fABNi
+			5432
+			hompbgmrzwqryhrc
+
+			https://explain.dalibo.com/plan/41e19ca6c7c56gc2#plan
+			this plan is excelent!
+
+
+				20:57:56
+				19:49s
+	Fix flaky tests:
+		• api.tests.test_suite_***.schemas.test_instance.FacilityFailsTestCase.test_delete_model_mutation
+		• api.tests.test_suite_5.test_download.DownloadTestCase.test_update_download_zip
+		• management.tests.test_order.OrderTestCase.test_update_invalid_room 
+		• management.tests.test_order.OrderTestCase.test_update_order
+		• api.tests.test_migration.MultiProcessingTestCase.test_task_classify_migrated_study
+		• management.tests.test_appointment.AppointmentTestCase.test_update_appointment_with_reschedule_order_feature_flag
+		• api.tests.test_suite_***.schemas.test_series.SeriesFailsTestCase.test_delete_model_mutation
+		• soap_service.tests.test_soap.SoapTestCase.test_schedule_order
+
+		and ReviewWindowTestCase
+		TestSealTimeConfigurations
+	P2H:
+		cr:
+			NO agregar p2h a los nombres para que sea posible agregar otros clientes sin cambiar los nombres de los modelos
+			y constants P2Hs_S3_BUCKET
+
+
+			y hacer cosas configurables
+
+			gs-apikey es por usuario
+
+			agregar user_name to p2huser
+
+
+
+		we're going to create on 
+			https://github.com/eva-tech/migrations-manager
+		This is going to do the cron logic, then upload to a bucket and:
+			create the order in middleware
+			send the files to pacs.
+		The webhook is managed by middleware
+
+
+
+		Ordenes pendientes de lectura = estudios sin interpretación -> response o RIS
+		pede imagens -> responde o PACS
+
+
+		Cuales son las APIs relevantes de EDEN?
+			en middleware, busco los estudios y como los guardo
+			Notificación 
+
+		Job tasks
+			Download - VID bioscan
+			EventJob 
+
+
+		hay un endpoint que es un csv 
+		dicom_url
+
+		study_number - folio
+		study_index - application_numebr 
+		https://github.com/eva-tech/migrations-manager
+
+
+
+		Probablmente tenemos que bajar una imagen por vez, agregar al modelo DIcomURL, y PACs hace el match de imagenes.
+
+
+		api/utils/dicom.py 
+	fixes de templates:
+		- Bloquear templates ocn mismo nombre
+		- Sugerencias malas mismo cuando no hay modalidad
+		- Testear LOAD_REPORT_TEMPLATES para garantizar que estea bien plantillas
+
+	Specific Fields:
+
+		Flujos:
+			Creación de paciente com OSF:
+	 			 mgmtCreatePatient(input: $input) {
+
+			management/management/commands/mgmt_organization_specific_fields.py
+				Insertion of OSF, don't quite understand it
+
+			StudyData:
+				create, update
+
+			PatientData -> represents data for a Patient in MGMT:
+				create, update 
+
+			getOrganizationSpecificFields(relatedModelType: Order|Patient|Study)
+				Problematic cause there's no reference for the type of order.
+
+
+
+		Configurar medios de contraste
+		https://www.notion.so/evacenter/Nueva-vista-de-edici-n-de-ordenes-279ea8a8244b80b0a183eb8cc5489160
+		https://www.notion.so/evacenter/Configurar-medios-de-contraste-1cfea8a8244b8082ba41dec267a09c43#1cfea8a8244b8082ba41dec267a09c43
+
+		Estos campos apareceren en Editar ordenen en MGMT
+		Se puede ver en la cuenta de dasa.
+		Método de contraste
+
+		puede ter campo
+			Organization specific fields options
+	evaluate_sla_with_review_window:
+		Como testar:
+			crear ENABLE_SERVICE_LEVEL_AGREEMENT
+			Organization Reivision Window
+			haz u nclick en un estudio, editar información y agrega un SLA
+
+		task_mark_study_as_sealed -> check_if_study_has_viewer_events
+		talvez sea por facilityFlag
+
+		EXplicación de iván:
+			Lo que pasa es que cuando ya envia el estudio a un paciente, ya no hay tiempo de sellado, se sella en la primera vez que el cron ejecuta
+		agregar 15 min más despues que el SLA ya cerro antes de cerrarlo
+		solo para lumiax
+	ZIP POC:
+		Tomar un estudio muy grande en testing y hacer eso y hacer 
+			series_id: 'a576c29c-a3c2-40a7-a1f9-46bc4a5f0345'
+			study_id: 'fe9cf3f5-d582-4fe6-8c94-fcaa70811636'
+
+
+
+		first hit:
+			daniel@daniel-Precision-3591:~$ curl -o /dev/null -s -w "Time: %{time_total}s\n" "https://files.dev-land.space/media/instance/files/fd4928bf-b83f-419c-a315-acbd0b7dabbb/85f1fa4a-c884-4ed5-80ee-3866df08e2c1/abc747cb-2a87-454d-a962-39b563665cb2/2025-08-25/files_bundle.zip"
+			Time: 0.461640s
+
+			next:
+			0,231
+			0,224
+			0,208
+			0,212
+			0,257
+
+
+		dicom files -> cuando llega process intance ifles.
+			las imagenes son borradas despues del procesamiento
+		un cron que toma las series creadas a + 10 minutos y que estean en un listado de modalidades (que tengam más imagenes)
+		Validar com mau como 
+		Es posible con multirame dicom?
+			es una especifidade dicom com imagenes em un array
+			Transfersyntax tiene que ser lo mismo, si tienen 2 distintos, hay que covnertilo
+			todas las imagenes tienem que tener mismo x vs y
+			msm jpg
+	Plantillas:
+		Modelos norm + query para listar templates por usuário:
+			https://github.com/eva-tech/evapacs-back/pull/4772
+		Preencher Normalização:
+			PONTOS:
+				esperando Camilo.
+			Feito um cron que vai preencher com OpenApi
+			https://github.com/eva-tech/evapacs-back/pull/4794
+		Basic crud for templates:
+			https://github.com/eva-tech/evapacs-back/pull/4772
+		Template count Usage:
+			https://github.com/eva-tech/evapacs-back/pull/4805
+
+		Tarefas:
+			0) Normalização e estrutura geral
+				será que só body_parts ou modality tbm?
+					Não!
+
+			A) busca
+			B) sugestão
+			C) contador de utilização
+
+
+		- Despues que Frontend terminé la visualización, validar que esté bien la previsualización
+		https://docs.google.com/document/d/1Wsp56IWeYlHWai7VbgZA9DgoMwOSdzWOqT5ojUBFo88/edit?tab=t.0#heading=h.xpht0p4rj3x5
+	Macros:
+		Diseño técnico:
+			como funciona atualmente os itens que vão ser modificados.
+			requerimentos
+			funcionalidades
+				- gerenciamento de macros
+					- criar
+					- editar
+					- listar
+				- salvar cuantidades de uso para mostrar por utilización y volver esta
+				- campos dinâmicos
+					- son variables en los macros, tienen posición
+
+			modelagem
+			endpoints
+
+
+
+			error extra:
+				el audio tiene que ser unico también
+		El texto hay que ser limpio para previews/pdfs y todo más.
+
+		https://edenmed.slack.com/archives/C096CLW1B1P/p1753929909167009	
+		Hablar con Camilo.
+		templates (plnatillas) vs macros
+			nombre tiene que ser unique
+			audio tiene que ser unique	
+	Optimización del listado con Elastic Search
+		Verify that params are okay:
+			https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Replication.Logical.Configure.html
+		Execute the procedure:
+			https://docs.aws.amazon.com/opensearch-service/latest/developerguide/aurora-PostgreSQL.html
+
+		Processors supported:
+			https://docs.aws.amazon.com/opensearch-service/latest/developerguide/pipeline-config-reference.html
+
+
+		https://docs.aws.amazon.com/opensearch-service/latest/developerguide/ingestion-limitations.html
+
+
+		POC type:
+			ELASTIC vs OpenSearch.
+				Opensearch:
+
+					Opensearch -> already integrated into AWS ecosystem
+				Elastic:
+					With OpenSearch Service, you can't make updates to the primary key attributes. This restriction is important when using ongoing replication with change data capture (CDC) because it can result in unwanted data in the target. In CDC mode, primary keys are mapped to SHA256 values, which are 32 bytes long. These are converted to human-readable 64-byte strings, and are used as OpenSearch Service document IDs.
+
+		Implementation possibilities
+			Set RDS config:
+				rds.logical_replication -> requires reboot
+
+			Opensearch:
+				Aurora -> AWS DMS (a way )
+
+				{
+	  "version": 2,
+	  "extension": {
+	    "aws": {
+	      "secrets": {
+	        "my-db-secret": {
+	          "secret_id": "arn:aws:secretsmanager:us-east-1:998849414045:secret:eva-configrations/development-v4UyjU",
+	          "region": "us-east-1",
+	          "refresh_interval": "PT1H"
+	        }
+	      }
+	    }
+	  },
+	  "daniel-testeando-opensearch": {
+	    "source": {
+	      "rds": {
+	        "db_identifier": "aurora-develop-cluster",
+	        "engine": "aurora-postgresql",
+	        "aws": {
+	          "region": "us-east-1"
+	        },
+	        "database": "RDSEvadevelop",
+	        "tables": {
+	          "include": [
+	            "public.pacs_studies"
+	          ],
+	          "exclude": []
+	        },
+	        "s3_bucket": "998849414045-daniel-testing-opensearch",
+	        "s3_region": "us-east-1",
+	        "export": {
+	          "kms_key_id": "arn:aws:kms:us-east-1:998849414045:key/7d65b36f-5f57-407e-9d21-faebc4d55f87",
+	          "iam_role_arn": "arn:aws:iam::998849414045:role/daniel-testeando-open-search"
+	        },
+	        "stream": true,
+	        "authentication": {
+	          "username": "${{aws_secrets:my-db-secret:username}}",
+	          "password": "${{aws_secrets:my-db-secret:password}}"
+	        }
+	      }
+	    },
+	    "processor": [],
+	    "sink": [
+	      {
+	        "opensearch": {
+	          "hosts": [
+	            "https://mmkvlm69ekiitg4p7kyd.us-east-1.aoss.amazonaws.com"
+	          ],
+	          "aws": {
+	            "serverless": true,
+	            "region": "us-east-1",
+	            "serverless_options": {
+	              "network_policy_name": "rds-c17e9b-policy"
+	            }
+	          },
+	          "index_type": "custom",
+	          "index": "index-${getMetadata(\"table_name\")}",
+	          "dlq": {
+	            "s3": {
+	              "bucket": "998849414045-daniel-testing-opensearch",
+	              "region": "us-east-1",
+	              "key_path_prefix": "DLQ/"
+	            }
+	          },
+	          "document_id": "${getMetadata(\"primary_key\")}",
+	          "action": "${getMetadata(\"opensearch_action\")}",
+	          "document_version": "${getMetadata(\"document_version\")}",
+	          "document_version_type": "external",
+	          "flush_timeout": "-1"
+	        }
+	      }
+	    ]
+	  }
+	Denormalziación y triggers:
+		https://www.notion.so/evacenter/Restore-prod-snapshot-a2edd1d432cc49208b462692a8d8d400
+
+		Let's restore the snapshot and put in the VPC group, redash SG, then, in redash, start a docker container with pgsql to do some queries.
+		psql -h aurora-cluster-middleware.cluster-clgl2un8d8zo.us-east-1.rds.amazonaws.com -U middlewareDB -d middlewareDB 
+			(will prompt the pass)
+	Optimización: count duplicado:
+		1 count: env/lib/python3.10/site-packages/graphene_django_pagination/connection_field.py:105
+			paginator.num_pages (get total number of itens)
+		2 count: env/lib/python3.10/site-packages/graphene_django_pagination/connection_field.py:56
+			(Get total number of itens.)
+	Optimización lista de estudios:
+		utilidade:
+			from django.db import connection; from django.conf import settings; import os; open(os.path.join(settings.BASE_DIR, "queries.txt"), "w").write(";\n".join(q["sql"] for q in connection.queries) + ";")
+
+
+		2 queries principales:
+			api/schemas/study.py
+			graphql query StudyListPage -> 2 queries (count+otro)
+
+
+		Cual es la información necesária en esta pantalla?
+	AIRFLOW vs HUP:
+		Airflow:
+	Buckets Logging:
+		
+		tamaño medio, creo: 10kb (monton de pequeños e pocos com 2-3mb)
+			 sampling com 10000 objetos
+			 files menores  128kb:
+				95%0
+			tamanho médio
+				Avg size: 13459.8 bytes
+			Total size of 10000 files:
+				 1116.56 MB
+			if minumum size would be 128kb
+				45% bigger.
+
+		Intelligent Tier:
+			S3 Intelligent-Tiering charges a small monitoring and automation charge, and has a minimum eligible object size of 128KB for auto-tiering
+
+		glacier;
+			S3 Glacier Deep Archive require 40 KB of additional metadata for each archived object
+
+
+		Operational:
+			Amazon S3 uses a special log delivery account to write server access logs. These writes are subject to the usual access control restrictions. We recommend that you update the bucket policy on the destination bucket to grant access to the logging service principal (logging.s3.amazonaws.com)
+
+			When you enable server access logging and grant access for access log delivery through your destination bucket policy, you must update the policy to allow s3:PutObject access for the logging service principal.
+			(in the console it automatically odes it for me)
+
+
+			The destination bucket must not have an S3 Object Lock 
+			The destination bucket must not have a default retention period configuration. 
+			The destination bucket must also not have Requester Pays enabled.
+
+
+			https://docs.aws.amazon.com/AmazonS3/latest/userguide/enable-server-access-logging.html#grant-log-delivery-permissions-general
+				use target prefix/destination prefix
+			(log/)
+			Set a log object key format for the log files
+			[DestinationPrefix][YYYY]-[MM]-[DD]-[hh]-[mm]-[ss]-[UniqueString]
+			[DestinationPrefix][SourceAccountId]/[SourceRegion]/[SourceBucket]/[YYYY]/[MM]/[DD]/[YYYY]-[MM]-[DD]-[hh]-[mm]-[ss]-[UniqueString]
+
+
+
+		Details about it:
+			The completeness and timeliness of server logging is not guaranteed. The log record for a particular request might be delivered long after the request was actually processed, or it might not be delivered at all. It is possible that you might even see a duplication of a log record. The purpose of server logs is to give you an idea of the nature of traffic against your bucket. Although log records are rarely lost or duplicated, be aware that server logging is not meant to be a complete accounting of all requests.
+
+
+		Pricing:
+			https://docs.aws.amazon.com/AmazonS3/latest/userguide/enable-server-access-logging.html
+		    There is no extra charge for enabling server access logging on an Amazon S3 bucket. However, any log files that the system delivers to you will accrue the usual charges for storage. (You can delete the log files at any time.) We do not assess data-transfer charges for log file delivery, but we do charge the normal data-transfer rate for accessing the log files.
+
+
+		IMPORTANT:
+			 For example, if you enable logging for a bucket, some requests made in the following hour might be logged, and others might not
+	CF distributions
+		route 53 staging setup:
+			brasil.edenmed.com CNAME Simple - No  d194t17n48k74k.cloudfront.net 300
+			internal-brasil.edenmed.com CNAME Simple - No  proxy-ssl.webflow.com 300
+
+
+		cloudfront distributions:
+			Origins:
+				internal-brasil.edenmed.com internal-brasil.edenmed.com Custom origin
+
+
+
+		CF distribution:
+			https://us-east-1.console.aws.amazon.com/cloudfront/v4/home?region=us-east-1#/distributions/E2HXPCDD8APYUV
+																										E2B1G47PE3EZ18
+																										d2xc4ep1tkpici.cloudfront.net
+	PGpubsub:
+		to redeploy enabling ssh into the cluster;
+			aws ecs update-service \
+		  --cluster ECS-eva-develop \
+		  --service backend-pg-pubsub-service-develop \
+		  --region us-east-1 \
+		  --enable-execute-command \
+		  --force-new-deployment
+		to ssh into it:
+			 aws ecs execute-command   --cluster ECS-eva-develop   --task 		   --container backend_pg_pubsub   --command "/bin/sh"   --interactive
+	Service discover for cloudwatch:
+		About:
+			A namespace identifies the name that you want to use to locate your resources and also specifies how you want to locate resources:
+				- AWS Cloud Map DiscoverInstances API calls
+				- DNS queries in a VPC
+				- or public DNS queries
+			create an AWS Cloud Map service for each type of resource for which you want to use AWS Cloud Map to locate endpoints.
+				The service is the "how to" how AWS cloud map to find those stuff
+			Routing policy
+				is the correct way.
+			it looks like it that simple: just attach the instance and use the provided DNS
+
+
+			from http.server import BaseHTTPRequestHandler, HTTPServer; Handler = type('Handler', (BaseHTTPRequestHandler,), {'do_GET': lambda self: (self.send_response(200), self.end_headers(), self.wfile.write(b"hello word"))}); HTTPServer(("0.0.0.0", 7395), Handler).serve_forever()
+
+
+			apparently we just need to change the secret, the AWS cloudmpa is already setup.
+			let's do first in develop and then in prod;
+				how to test:
+					in evabackend 
+
+		TESTES:
+			From core to middleware:
+				asegurarse que esta activado ENABLE_MIDDLEWARE_WEBHOOK
+				hacer algo que genere um log (e.g. crear una orden)
+				Verificar celery de evapacks que la task se ejecutó
+				Verificar en adm de middleware que existe un nuevo Webhook para este evento.
+			from middleware to integrations:
+				enter the adm, /admin/rest_api/requestlog/ has the logs of the requests.
+	Ratelimit downloads:
+
+		ratelimited_stuff
+			viewerLink (query)
+		createDownloadIsoMulti
+		createDownloadIso
+		createDownload
+		createStudiesCsv
+		createWorklistCsv
+		createOrdersCsv
+		createStudyPdfFile
+
+
+			createStudyPdfFile is the biggest by a fair margin
+
+			fields @timestamp, @message 
+			| filter @message like /(?i)'request_graphql_operation_name': '(viewerLink|createDownloadIsoMulti|createDownloadIso|createDownload|createStudiesCsv|createWorklistCsv|createOrdersCsv|createStudyPdfFile)'/ 
+			| parse @message /JWT (?<jwt>[^ ]+)/ 
+			| stats count(*) as count by bin(5m), jwt 
+			| sort count desc
+
+
+			fields @timestamp, @message 
+			| filter @message like /'request_graphql_operation_name': '(viewerLink|createDownloadIsoMulti|createDownloadIso|createDownload|createStudiesCsv|createWorklistCsv|createOrdersCsv|createStudyPdfFile)'/ 
+			| parse @message /'Authorization': 'JWT (?<jwt>[^']+)'/ 
+			| filter jwt = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImhhcnZpLmhpbm9zdHJvemFAcHVjcC5lZHUucGUiLCJleHAiOjE3NDg5NDE4ODksIm9yaWdJYXQiOjE3NDg4NTU0ODl9.8I_jZAtng3ZESVOjYcV-_1YfQ4ILz-PWX2kVAg4bjPw'
+			| sort @timestamp desc
+
+
+		originales:
+			createDownloadIsoMulti
+			createDownloadIso
+			createDownload
+			createStudiesCsv
+			createWorklistCsv
+			createOrdersCsv
+			createStudyPdfFile
+
+
+
+		2 nuevas queries
+		studyPdfFile
+		downloadIso
+
+
+			Mutation.createDownloadIsoMatrix
+
+			Probablemente no:
+				Query.downloads
+				Query.download
+
+			Query.downloadIsosMulti
+			Query.downloadIsoMulti
+			Query.downloadIsoMultiByStudies
+			Query.downloadIsoMultiByStudiesMatrix
+			Query.downloadIsos
+			Query.downloadIso
+			Query.downloadIsosByBurner
+	Migración de archivos de s3 DAS:
+		doing manual in aws:
+			from api.services.configuration import *
+			get_value_from_configuration(MIGRATION_CONFIG)
+			from api.models.configuration import Configuration
+		    migration_config: dict = get_value_from_configuration(MIGRATION_CONFIG)
+
+			import json
+			Configuration.objects.filter(identifier=MIGRATION_CONFIG).update(
+			default_value=json.dumps(
+			    {
+			            MIGRATION_ID: "fd4928bf-b83f-419c-a315-acbd0b7dabbb",
+			            DESTINATION_BUCKET: "998849414045-daniel-testing-stuff",
+			            SOURCE_BUCKET: "998849414045-data-dev",
+			        }
+			)
+			)
+			s3_client.copy_object(
+	                    Bucket='998849414045-daniel-testing-stuff',
+	                    CopySource={"Bucket": '998849414045-data-dev', "Key": "media/88ee6d27-3e73-49af-ac3d-e2c5c956138b/2025-01-16/a505009b-5a5f-489d-954f-749467fc9b99.jpeg"},
+	                    Key="media/88ee6d27-3e73-49af-ac3d-e2c5c956138b/2025-01-16/a505009b-5a5f-489d-954f-749467fc9b99.jpeg",
+	                )
+			from api.cron_tasks import *
+
+
+
+		https://docs.aws.amazon.com/prescriptive-guidance/latest/patterns/copy-data-from-an-s3-bucket-to-another-account-and-region-by-using-the-aws-cli.html
+
+		aws s3 sync s3://998849414045-dicom-images/     s3://998849414045-daniel-testing-stuff/     --dryrun
+
+
+
+
+		copiar todos las imagenes y otros datos s3 virginia -> s3 brasil
+		crear una base de datos copia 
+		cambiar todas las urls de la base de datos copia -> puntar a s3 brasil.
+
+		011168829937-data/media/instance/files/
+			localización de los artigos dicom
+		la base de datos no tiene el nombre de bucket, o sea, solo se necesita mover de un bucket a otro, mantenendo la estructura
+		Los path nunca son modificados, si se modifican un archivo, crean un nuveo path. 
+	logging de s3:
+		verificar los costos
+		performance
+		despues de studio, decidir que hacer
+		pobablemente solo los imporntantes.
+
+		agregar un apolítica para mandarlo a glacier depois de un tiempo.
+		Crear documentación en notion de como recuperar los logs.
+	agregar ratelimit WAF
+		aws wafv2 get-rate-based-statement-managed-keys --scope=CLOUDFRONT --region=us-east-1 --web-acl-name=GeneralALBWAF --web-acl-id=WebACLId --rule-name=ip-rate-limit
+
+
+		aws wafv2 get-rate-based-statement-managed-keys --scope=REGIONAL --region=us-east-1 --web-acl-name=GeneralALBWAF --web-acl-id=42157890-4f71-4038-8260-c502bed6516a --rule-name=ip-rate-limit
+
+
+
+
+		Ratelimit -> No necesita agregar evapacs a service discovery porque middleware habla apenas con integraciones, o sea, basta cambiar el secreto para hablar con integraciones, que ya existe un WAF
+
+
+		
+		queries utiles:
+			https://us-east-1.console.aws.amazon.com/wafv2/homev2/web-acl/waf-prod-regex/208a3f5f-8eec-40a5-98de-8f437f43c5ea/overview?region=us-east-1
+			user agent most requests
+
+			https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:logs-insights$3FqueryDetail$3D~(end~0~start~-300~timeType~'RELATIVE~tz~'UTC~unit~'seconds~editorString~'fields*20*40timestamp*2c*20*40message*2c*20httpRequest.clientIp*0a*7c*20parse*20*40message*20*2f*5c*7b*22name*22*3a*22*28U*7cu*29ser-*28A*7ca*29gent*22*2c*22value*22*3a*22*28*3f*3cuserAgent*3e.*2a*3f*29*22*5c*7d*2f*0a*7c*20stats*20count*28*2a*29*20as*20requestCount*20by*20httpRequest.clientIp*2c*20userAgent*0a*7c*20sort*20requestCount*20desc*0a*7c*20limit*20100*0a~queryId~'03fe10f1-b83a-4ab0-b9d2-e0f3fff7a552~source~(~'aws-waf-logs-prod)~lang~'CWLI)$26tab$3Dlogs
+			user agent vs ip vs most requests
+
+			https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:logs-insights$3FqueryDetail$3D~(end~0~start~-43200~timeType~'RELATIVE~tz~'UTC~unit~'seconds~editorString~'fields*20httpRequest.clientIp*0a*7c*20stats*20count*28*2a*29*20as*20requestCount*20by*20httpRequest.clientIp*0a*7c*20sort*20requestCount*20desc*0a*7c*20limit*20100~queryId~'03fe10f1-b83a-4ab0-b9d2-e0f3fff7a552~source~(~'aws-waf-logs-prod)~lang~'CWLI)$26tab$3Dlogs
+			ip most requests
+
+
+		descobrir o que es normal, y podrias ser un usonormal
+	Amazon Route 53 MX Resource Record Sets and Sender Policy Framework
+		DMARC was not add to verify cause the domain already has, and it applies, then, to all subomains.
+		2 SPF were added:
+			TXT send.edenmed.com "v=spf1 include:amazonses.com ~all"
+			TXT soporte.edenmed.com. "v=spf1 include:sendgrid.net ~all"
+				as twillio docs but with ~ instead of -: https://www.twilio.com/docs/sendgrid/ui/account-and-settings/spf-records
+	cloudfront root object configured:
+		https://us-east-1.console.aws.amazon.com/cloudfront/v4/home?region=us-east-1#/distributions/E10317I3JJZ49K
+			isso é um redirecionamento de internal-brasil.edenmed.com -> brasil.edenmed.com, que é gerenciado por webflow.
+			aparentemente não mudou nada pq index.html já é o nome internamente (pode-se verificar acessando diretamente)
+
+		https://registry.terraform.io/providers/hashicorp/aws/5.34.0/docs/resources/cloudfront_distribution#example-usage
+		muy sencillo, pero si hay una página de 404?
+	Abordar vulnerabilidad de refresh token	:
+		Testes:
+			login normal -> todo funciona
+			intelligence e mgtm funcionam
+		En patient access, hay el encabezado Credentials + 3 encaebzados importantes(CREDENTIALS_HEADER, ORGANIZATION_HEADER,RESOURCE_HEADER) +  1 Patient-Access
+			los 3 son sempre enviados, el Patient-access apenas si la flag patient_auth esta activa
+		Patient-Access es una otra mutación parecida con ObtainJsonWebToken, pero el JWT tiene una info extra.
+		Sin enbargo, ella no vuelve el refresh token
+
+		Patient-Access es el JWT del paciente, que es el JWT normal + un campo Patient-Access  
+
+
+
+
+
+		Tem 2 bugs:
+			1 o auth de pacientes com 3 headers
+			2 o auth de pacientes com Patient-Access
+
+
+		teste para viewre_link
+		resolve_viewer_link
+		resolve_study_viewer_url
+		api/tests/test_suite_4/test_patient_auth.py
+
+
+		testing:
+			hacer testing com router/middleware
+			router tiene un ec2, pero esta parado, suele empieza-lo.
+			probablemente sea mejor testar con postman, registra que hizo y manda a Q&A
+
+
+
+		be 100% bacxkward compatible.
+		the new login mutation should add the header and do not return token
+		the new refresh should refresh the header and d not return the token
+		the logout should invalidate the token and the header.
+		we should also may be able to retrieve the token from the header.
+
+
+		Criar una nueva mutación nueva para no romper otras cosas.
+			muchos otros sistemas utilizan esta mutación
+
+		https://github.com/eva-tech/evapacs-back/blob/de6fc6a623e1346b48856b5ce10779bf547a8ef2/api/views/auth.py#L77
+
+		graph_jwt have a view that actually acts before entering the graphql domain, where response in non existent
+			env/lib/python3.10/site-packages/graphql_jwt/decorators.py
+		
+
+		JWT + graphql
+
+
+		api/schemas/auth.py
+		evapacsback/settings.py
+		api/services/patient_auth.py
+		api/schemas/auth.py
+	email:
+		las IPs son todas correctas
+		Hacer un DMARC:
+			name: _DMARC.edenmed.com
+			type: txt
+			value: "v=DMARC1;p=none;rua=mailto:daniel.passy@edenmed.com"
+	Missing security headers:
+		Intentar referer policy desde django
+			ya existe
+		Cambiar CSP para de producción
+			la unica diferencia es un localhost extra
+
+
+		Production:
+			front pacs:
+				Strict-Transport-Security
+					max-age=31536000
+				X-Frame-Options
+					SameOrigin
+				Referrer-Policy
+					strict-origin-when-cross-origin
+				X-Content-Type-Options
+					nosniff
+				Content-Security-Policy
+					default-src 'none'; font-src https: data:; img-src blob: https: data:; script-src-elem https: 'unsafe-inline'; style-src-elem https: 'unsafe-inline'; style-src https: 'unsafe-inline'; media-src https: data:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; connect-src https: wss: data: blob:; frame-src https: blob:; script-src 'self' 'unsafe-eval' https:; manifest-src https:; worker-src 'self' blob:;
+				Permissions-Policy (experimental)
+					-
+			front MGTM
+				Strict-Transport-Security
+					max-age=31536000
+				X-Frame-Options
+					SameOrigin
+				Referrer-Policy
+					strict-origin-when-cross-origin
+				X-Content-Type-Options
+					nosniff
+				Content-Security-Policy
+					default-src 'none'; font-src https: data:; img-src blob: https: data:; script-src-elem https: 'unsafe-inline'; style-src-elem https: 'unsafe-inline'; style-src https: 'unsafe-inline'; media-src https: data:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; connect-src https: wss: data: blob:; frame-src https: blob:; script-src 'self' 'unsafe-eval' https:; manifest-src https:; worker-src 'self' blob:;
+				Permissions-Policy (experimental)
+					-
+			back MGTM y PACS
+				Strict-Transport-Security
+					-
+				X-Frame-Options
+					DENY
+				Referrer-Policy
+					same-origin
+				X-Content-Type-Options
+					nosniff
+				Content-Security-Policy
+					-
+				Permissions-Policy (experimental)
+					-
+			front de inteligence + back de inteligence (web socket)
+				Strict-Transport-Security
+					-
+				X-Frame-Options
+					-
+				Referrer-Policy
+					-
+				X-Content-Type-Options
+					-
+				Content-Security-Policy
+					-
+				Permissions-Policy (experimental)
+					-
+		Headers:
+			Strict-Transport-Security
+				disallow HTTPs, everything must be http.
+			X-Frame-Options
+				Iframe, mandar um deny.
+			Referrer-Policy
+				If we send where did the request came from
+				Probably would add the default just to pass the test.
+				https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Referrer-Policy#strict-origin-when-cross-origin_2
+
+			X-Content-Type-Options
+				probably just needs to add the no-sniff and is just fine, but we may need to check if any file has no content-type
+
+				hay que verificar si todos los objeto s3 que sean enviados tenien um content-type, y todos más.
+			Content-Security-Policy
+				solo hay el en pacs frontend/:
+				content-security-policy		
+					Content-Security-Policy: default-src 'self';  script-src 'self' 'unsafe-inline' 		*.dev-land.space;  style-src 'self' 'unsafe-inline' *.dev-land.space;  img-src 'self' data: *.dev-land.space;  font-src 'self' *.dev-land.space;  object-src 'none';  base-uri 'self';  frame-ancestors 'none';
+
+
+			Permissions-Policy (experimental)
+				probably won't add
+		front de pacs - https://pacs-staging.dev-land.space/
+			Referrer-Policy
+				strict-origin-when-cross-origin
+		front de MGTM apps-staging.dev-land.space:
+			Strict-Transport-Security
+				max-age=31536000NN
+			X-Frame-Options
+				SameOrigin
+			Referrer-Policy
+				strict-origin-when-cross-origin
+			X-Content-Type-Options
+				nosniff
+			Content-Security-Policy
+				default-src 'none'; font-src https: data:; img-src blob: https: data:; script-src-elem https: 'unsafe-inline'; style-src-elem https: 'unsafe-inline'; style-src https: 'unsafe-inline'; media-src https: data:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; connect-src https: wss: data: blob:; frame-src https: blob:; script-src 'self' 'unsafe-eval' https:; manifest-src https:; worker-src 'self' blob:;
+					back de MGTM y PACS - http://staging.dev-land.space/
+						Strict-Transport-Security
+							- si pudiera añadir aqui pero
+						X-Frame-Options
+							DENY
+						Referrer-Policy
+							same-origin
+						X-Content-Type-Options
+							nosniff
+
+
+		Cambios:
+			Referrer-Policy - agregado en la política custom-security-headers (o sea, front)
+			3 o 4 headers fueron agregados en todos los ALB ()
+
+
+		Terraform:
+			front:
+				response headers policy: 657cb794-946b-4a61-b8c7-86b5ef2bd3d8 para cloudfront al front de pax/dev/testing/us-testing
+			en ALB
+			    adicionar https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lb_listener
+				routing_http_response_strict_transport_security_header_value-1
+				routing_http_response_x_content_type_options_header_value-1
+				routing_http_response_x_frame_options_header_value-1
+				routing_http_response_content_security_policy_header_value-1
+	csv:
+		1- api/schemas/mutations/download.py:create_order_list_download
+			OrderListCSVReportService(OrderCSVGenerator(BaseCSVGenerator(CSVGenerator)), OrderCSVDataBuilder(CSVDataBuilder))
+				base class: CSVReportService
+					management/tasks/csv.py:create_csv_list_report
+
+		2- api/services/download.py:generate_csv_study_list_report_with_extra_data
+			api/tasks.py:create_csv_from_study_list
+				c
+				StudyListCSVGeneratorOSF
+				StudyListCSVGenerator(CSVGenerator)
+
+		se puede hacer llamada en powershell
+		flujos que tienem csv:
+			Brads:
+	rate limit:
+		se puede enviar whatsapp/corre email.
+		hay como 
+		2 puntos donde se envian:
+		en el estudio
+		en 3 puntos:
+			"enviar estudio y QR"
+			"enviar report"
+		en management, órdenes de estudio, tres puntos, enviar reporte
+
+
+		Quedame hacer teste manual.
+		definición de un rate limit para:
+			email:
+	MIgración a Fargate:
+		Definición
+			Como testear:
+				files:
+					subrir archivos desde el router (DicomFileTemp)
+					para testear subir un archivo dicon en pacs. 
+				subscription
+					WS
+					curl 'wss://subscriptions-us-testing.dev-land.space/graphql/' \
+					  -H 'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0' \
+					  -H 'Accept: */*' \
+					  -H 'Accept-Language: en-US,en;q=0.5' \
+					  -H 'Accept-Encoding: gzip, deflate, br, zstd' \
+					  -H 'Sec-WebSocket-Version: 13' \
+					  -H 'Origin: https://pacs-us.dev-land.space' \
+					  -H 'Sec-WebSocket-Protocol: graphql-ws' \
+					  -H 'Sec-WebSocket-Extensions: permessage-deflate' \
+					  -H 'Sec-WebSocket-Key: osfMO7/j9dZSviS+3bwa8A==' \
+					  -H 'Connection: keep-alive, Upgrade' \
+					  -H 'Cookie: i18nLng=es; _clck=1ahm2wx%7C2%7Cfxi%7C0%7C2017; _clsk=11g2sfc%7C1752238385612%7C2%7C1%7Ch.clarity.ms%2Fcollect; oid=fd4928bf-b83f-419c-a315-acbd0b7dabbb; patient_access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXRpZW50X2FjY2Vzc19pZCI6ImFlOGUxZTBhLTkzMGYtNGI2NS1hMWVjLTYxNjc0YjBhMGZjMyIsInR5cGUiOiJwYXRpZW50IiwiZXhwIjoxNzUyNzk2MDA4fQ.Q4-ZK9KLljrZ_nxK-1vIRBq7zTUok6xTIDOZlBLRUQM' \
+					  -H 'Sec-Fetch-Dest: empty' \
+					  -H 'Sec-Fetch-Mode: websocket' \
+					  -H 'Sec-Fetch-Site: same-site' \
+					  -H 'Pragma: no-cache' \
+					  -H 'Cache-Control: no-cache' \
+					  -H 'Upgrade: websocket'
+				Backend:
+					normal
+			A migrar en develop:
+				backend-eva-develop
+				files
+				subscription
+				(inlligence es despues)
+				(celery es un backup, ya esta migrados)
+			o que hacer:
+				3 nuevos servicios en fargate
+				no borrar los servicio en ec2, mantener los 6.
+				los containers_definitions tienem una dupla: un _fargate y otro regular (ec2)
+
+
+				en módulo ALB, en target_group, el target_type es diferente para ec2 y fargate (instance vs ip)
+		Analysis:	
+			estructura actual
+	Eden - quem é quem?
+
+		quien
+			Esteban
+				Frontend
+				cafe
+			Jose Nieves
+				data/BI
+				video juegos
+			Juan Jose
+				backend
+				desportes extremos
+			Salvador Gonçales
+				frontend
+				otaku & videojuego
+			Jorge Juarez
+				backend
+			Guillermo
+				AI/ml ops (no éntendi bien)
+			Abner:
+				AI/data
+			Milagros:
+				Q/A
+			Salvador Daniel:
+				backend.
+			Juan Raul
+				Produto.
+			Juan manuel:
+				frontend
+			Camilo Metaute:
+				Produto 
+			Carlos Cuatin
+				Front
+			Sergei
+				backend.
+			Alejandro forero	
+				frontned (Lider)
+			Carlos Cruz
+				suporte (faz fullstack.)
+			Felix Roquet:
+				QA (Lider) 
+			Ivan:
+				backend (Lider)
+
+
+				curl 'http://localhost:8000/graphql/'   -X POST   -H 'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0'   -H 'Accept: */*'   -H 'Accept-Language: es'   -H 'Accept-Encoding: gzip, deflate, br, zstd'   -H 'Referer: http://localhost:3000/'   -H 'content-type: application/json'   -H 'authorization: JWT eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVzZXJAZXZhY2VudGVyLmNvbSIsImV4cCI6MTc1MzMwNzA1Nywib3JpZ0lhdCI6MTc1MzIyMDY1N30.uMQcPKRsxrIJaf5-BPf9Rw8pVSkmbWLmg9u37kh7R_w'   -H 'organization-id: 19a48f61-16ba-43a0-8cde-32d1796e4d67'   -H 'Origin: http://localhost:3000'   -H 'Connection: keep-alive'   -H 'Sec-Fetch-Dest: empty'   -H 'Sec-Fetch-Mode: cors'   -H 'Sec-Fetch-Site: same-site'   -H 'Priority: u=4'   --data-raw '{"operationName":"StudyListPage","variables":{"limit":20,"offset":120},"query":"query StudyListPage($search: String, $limit: Int, $offset: Int, $ordering: String, $status: [String], $patientAgeStart: Float, $patientAgeEnd: Float, $pacsStudyStartDate: DateTime, $pacsStudyEndDate: DateTime, $reportSignedStartDate: DateTime, $reportSignedEndDate: DateTime, $organizationSpecificFields: String, $customStudyListId: UUID, $patientGender: [String], $seriesModality: [String], $dicomDateTimeGte: DateTime, $dicomDateTimeLte: DateTime, $urgencyLevel: [String], $studyType: [UUID], $practitionersAssignedUserId: [String], $practitionerReviewerUserId: [String], $seriesDicomOperatorsName: [String], $facility: [UUID], $reportsBirads: [String], $criticalValuesId: [String], $tagSpecialty: [String], $isSealed: [Boolean], $slaStatus: [String]) {\n  studies(\n    search: $search\n    limit: $limit\n    offset: $offset\n    ordering: $ordering\n    status_In: $status\n    patientAgeStart: $patientAgeStart\n    patientAgeEnd: $patientAgeEnd\n    studyStartDate: $pacsStudyStartDate\n    studyEndDate: $pacsStudyEndDate\n    reportSignedStartDate: $reportSignedStartDate\n    reportSignedEndDate: $reportSignedEndDate\n    organizationSpecificField: $organizationSpecificFields\n    customStudyListId: $customStudyListId\n    patient_Gender_In: $patientGender\n    series_Modality_Id_In: $seriesModality\n    dicomDateTime_Gte: $dicomDateTimeGte\n    dicomDateTime_Lte: $dicomDateTimeLte\n    urgencyLevel_In: $urgencyLevel\n    studyType_Id_In: $studyType\n    practitionersAssignedUserId: $practitionersAssignedUserId\n    practitionerReviewerUserId: $practitionerReviewerUserId\n    dicomOperatorsName: $seriesDicomOperatorsName\n    criticalValues: $criticalValuesId\n    facility_Id_In: $facility\n    reports_Birads_In: $reportsBirads\n    tagSpecialty: $tagSpecialty\n    isSealed_In: $isSealed\n    slaStatusIn: $slaStatus\n  ) {\n    pageInfo {\n      hasNextPage\n      hasPreviousPage\n      __typename\n    }\n    results {\n      id\n      dicomDateTime\n      dicomDescription\n      dicomReferringPhysician\n      dicomReason\n      dicomRequestingPhysician\n      dicomDateTimeEditable\n      hasOnDemandPrint\n      status\n      urgencyLevel\n      createdAt\n      folio\n      studyTypeEditable\n      reportExpiringDate\n      isSealed\n      inRecall\n      recallOptions {\n        id\n        notes\n        option {\n          id\n          optionText\n          __typename\n        }\n        __typename\n      }\n      sealedTo\n      aiFindings {\n        id\n        isCritical\n        medicalCondition {\n          id\n          nameEs\n          nameEn\n          namePt\n          descriptionEn\n          descriptionEs\n          descriptionPt\n          __typename\n        }\n        __typename\n      }\n      aiStatus\n      patientStudyAge\n      reportSignedAt\n      patientStudyAgeMonths\n      patientStudyAgeDays\n      specialties {\n        id\n        description\n        name\n        __typename\n      }\n      facility {\n        id\n        name\n        timezone\n        __typename\n      }\n      reviewRequired\n      reviewerPractitioner {\n        id\n        fullName\n        __typename\n      }\n      practitionerAssigned {\n        fullName\n        id\n        __typename\n      }\n      referringPractitioner {\n        id\n        fullName\n        __typename\n      }\n      patient {\n        fullName\n        gender\n        birthDate\n        identifier\n        identifierEditable\n        __typename\n      }\n      reports {\n        pdfUrl\n        __typename\n      }\n      modalities\n      criticalValues {\n        ...StudyCriticalValue\n        __typename\n      }\n      __typename\n    }\n    totalCount\n    __typename\n  }\n}\n\nfragment StudyCriticalValue on StudyCriticalValueType {\n  id\n  observation\n  criticalValueName\n  createdAt\n  criticalValue {\n    id\n    name\n    __typename\n  }\n  __typename\n}\n"}'
+

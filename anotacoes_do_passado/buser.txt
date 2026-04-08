@@ -1,0 +1,1578 @@
+Old
+
+
+
+Brag-document:
+	Fiz todos os alertas de erros no motorista que foram replicados pra empresa inteira (eu acho)
+	Inicie uma cultura de documentação tech na squad-motora.
+	Fiz o onboarding de novos busertecos
+	Articulei a implementação de test em front, que por 1 ano não deu certa que vai garantir a estabilidade e agilidade no app do motora.
+	AnáliseActiveDriverHistory changeDriver não comporta o primeiro checkin - resovlido com checkin
+	Adicionar o event time no activeDriverHistory 
+	post mortem
+	1 docker só pro banco.
+	alerta de contagem (c buserteca)
+	bloquear pwa pra novos usuários.
+	Encher o saco de arq pra erros 500 - 502 etc
+	Novos esquema de alerta de MRs.
+	Infinitos CRs o mais rápidos possíveis
+	Testes extras cypress - área deslogada
+	fiz o back com o léo - Garantir rastreio da viagem horas antes do embarque
+
+	
+
+Rfactor front PWA-
+	vue 3
+	Adicionar testes unitários bonitinhos
+	Transformar driver-state numa store.
+	Migração de Nuxt pra Vue:
+	A gente precisa migrar pra PInia eventualmente
+	Composition API
+	A gente precisa setar testes.
+	Pensar em fazer alguma Marquitetura baseado em eventos e que cada API tenha fallback pro localstorage como default.
+	- Como primeiro passo, testar fetchNextGroups, fazer teste de ui dado que a mudança está por vir e testar a feature não vai requerer reescrever o teste
+
+
+
+Feito:
+	Alarmes Sentry
+	escrever um post mortem
+	Mandar alguma coisa sobre git pull pra Carol
+	Por no Qulture rocks -> CR do Léo, Caren, 1:1 com o Pava.
+	Erros no EAD Precisam não ser da minha repsonsabilidade -> devolver erro jogando responsa pro outros
+	Fazer TEst em flutter.
+	Criar o alerta no Sentry para motorista sem CPF.
+	Fazer CR da Ana
+	Escrever o docs de Boas vindas ao FLutter
+	Cobrar CR do Pava sobre EAD no front da staff e mandar.
+	Escrever sobre Kibana. - https://app.clickup.com/30953227/v/dc/xgkrb-22023/xgkrb-22883
+	Criar alerta pro flutter no canal de alertas.	
+	Corrigir CR sobre fluxo de 2 drivers, parte inicial.
+	Fazer a sincronia do cronômetro.
+	Escrever DOC sobre logs.
+	Fazer Localização no PWA+FLUTTER.
+	Testar localização no PWA
+
+Separação do Back:
+	https://gitlab.buser.com.br/buser/buser_django/-/merge_requests/7268
+
+
+MOT-7338 📜 A capacidade dos grupos não tá otimizada para a escala de 2 motoristas e estamos perdendo venda (💸 aumento de receita previsto: +-20k/mês)
+	✅ Testando o fluxo.
+		rota com 2 motoristas
+		criar grupo com ônibus com maior capacidade.
+		verificar a capacidade do grupo.
+		TROCAR O ÔNIBUS cOM TOCO.
+		VERIFICAR A CAPACidade do grupo
+
+
+		rota com 1 motoristas
+		criar grupo com ônibus com maior capacidade.
+		verificar a capacidade do grupo.
+		TROCAR O ÔNIBUS cOM TOCO.
+		VERIFICAR A CAPACidade do grupo
+
+
+	Falta fazer:
+		procura_match_rateio não tem o ônibus para pegarmos o tipo de ônibus.
+
+
+	Detalhes importantíssimos
+		A definição final da capacidade ocorre em: api/staff/groups/escalar_empresa_onibus_rotina
+		Capacidade vendida não é mais uma propriedade do ônibus e sim do onibus+grupo.
+	
+	A migração:
+		✅ Criar OnibusClasse.assentos_reservados_motorista
+		✅ manter sync sistema novo e velho 
+			update_or_create_onibus
+		✅ popula sistema novo.
+			assentos_reservados_motorista = capacidade - capacidade vendida
+		✅/❌ Atualizar escalação de ônibus pra consultar esse campo de fato
+			Criei rascunho, não testei.
+			Para testar talvez não precisa mudar em mil lugares e simplesmente mudar no def save():
+		😱 Atualizar serializadores para mandarem o novo campo
+			Não da pra simplesmente sobreescrever o serializador, vai gerar uma dependência nada a ver.
+			Consultar todos os fronts, quem usa essa porra.
+			Listar os front usando o kibana, ele tem o header do host que fez a requisição.
+
+		
+	Mapeamento:
+		❌ Serializadores - não da pra fazer:
+		    models_company.py	
+		        Onibus.to_dict_json()
+				     onibus_svc.remove_onibus
+				     serializer_onibus
+				     serializer_grupo
+			serializer_onibus.py
+				serialize_object		
+
+		Que views usam esse serializadores:
+		     "api/staff/efops/bulk-remove-bus"
+		     "api/staff/onibus/remove"
+		     "api/v1/company/bus/remove"
+		     "api/v1/company/bus/save_"
+		     "api/staff/onibus/save"
+		     "api/v1/company/bus"
+		     e muitos muitos outros.
+		     Ir em cada projeto e verificar se está usando o campo capacidade_vendida.
+
+		Serviços e modelos.
+		    inputs:
+		    	❌ models_company.py
+			    	Onibus.classe_capacidade	
+				✅ core_forms.py
+					ClasseOnibusForm
+
+			✅ preco_svc.py
+				procura_match_rateio
+				recalcula_precos_classe(ClasseOnibusForm)
+			✅ remanejamento_svc.py
+				match_rateio_classes_bucketizadas
+				bulk_change_class(ClasseOnibusForm)
+			✅ escalar_onibus_svc.
+				simular_escalar_onibus(ClasseOnibusForm)
+				atualizar_grupoclasse_por_onibus(ClasseOnibusForm)
+				_valida_capacidade_onibus
+				_resize_grupo
+				_nao_permite_overbooking
+				
+
+
+
+
+Projeto 2: Projeto multa.
+	COmando que:
+		Cria motivomultas novas.
+		Desativa motivomultas antigas.
+		Muda as multas não julgadas para apontarem para esses novos motivos.
+
+	Endpoint pra escolher as multas só manda as multas ativadas/o front filtra.		
+
+
+
+	Alterar as multas.
+	Avisar Lari que as multas no dash foram modificadas, portanto o código + desconto mudou e provavelnente terão de ser recriadas.
+
+
+	2.9	Não avisar a Buser sobre a desistencia e/ou não realização da viagem com até 24 horas de antecedência	0,25	Valor do Frete
+	2.10	Não avisar a Buser sobre a desistencia e/ou não realização da viagem com até 8 horas de antecedência	0,5	Valor do Frete
+	2.11	Não avisar a Buser sobre a desistencia e/ou não realização da viagem com até 1 horas de antecedência	0,75	Valor do Frete
+
+
+	2.9	Desistir da viagem de 48 horas até 24 horas de antecedência ao horário previsto			20%	Valor do Frete
+	2.10	Desistir da viagem com até 24 horas de antecedência			25%	Valor do Frete
+	2.11	Desistir da viagem com até 12 horas de antecedência			30%	Valor do Frete
+	2.12	Desistir da viagem com até 8 horas de antecedência	X		40%	Valor do Frete
+	2.13	Desistir da viagem com até 4 horas de antecedência	X		60%	Valor do Frete
+	2.14	Desistir da viagem com menos de 1 hora de antecedência	X		100%	Valor do Frete
+
+
+	Se uma multa tva apontando 2.9, 25% de frete, deve apontar pra 2.10 agora. 	
+
+
+Atualizar a lista de passageiros:
+
+
+
+    // we have to verify even for a single driver.
+    // 20 seconds is kind of too much. but it was an arq requirements.
+
+    // We have to take care of pending operatins
+    // How can we make sure that it's sequential, i.e.
+    // any pending operations was already fullfiled
+    // problem 1: some other function have may called pending operation
+    // and we need to wait for it, we may add a "lock" for it, a variable.
+
+    Pergunta: Basta a gente fazer um flush antes? O que acontece se outra função tiver chamado o flush e estiver no meio do caminho?
+    	Não, existe um momento que não tem operações 
+    	E se a gente só remover do array após a api for bem sucedida?
+    		Será que tem problema de reatividade ou algo assim?
+    			Não, não tem nenhum lugar que depende de "pendingOperations.ops"
+    	Conclusão: Sim, basta fazer o flush operations e ajeitar a ordem pra remover só depois de concluir a requisição.
+
+    O sendPendingOperation já devolve informações.
+    O prepare component tem passo extra. Não deveria ter.
+
+    Falta testar em staging.
+
+    sendPendingOperations poderia se chamar sync.
+    O modelo de dados do back e do front tão muito diferente, poderia adequar.
+
+disscussão organização squad 23/12/22:
+	Sobre projeto vs problema vs tema
+	Eu acho que o objetivo métricamente deve ser bem definido desd eo momento 0
+	o projeto é pedagío? blz, sim, mas o projeto é "aumentar faturamente reduzindo custo com pedágio"
+
+	DoD a gente não faz, pq?
+	Pq a gente não tem uma etapa.
+	DoD no pai concordo.
+
+Planning 12/9 -> 25/9
+	Lista de passageiros não é atualizada automaticamente
+		Dificuldades: 
+			Só tem pooling com 2 motoristas.
+			Qual a garantia que o checkin 
+		A gente pega os passageiros do /next_groups
+
+
+		Tá bem suave, um next_groups tem 5.3kb com 3 grupos.
+		Poderia só fazer pooling, ou poderia usar o FCM, FCM é interessante, pq é legal long term, mas é maiscomplicado a estrutura. Acho que o pooling é meljhor.
+
+	Arrumar comportamento do tracking com Modo de Economia de Energia ativado
+		Não tenho ideia nem se isso é possível
+
+	Garantir rastreio da viagem horas antes do embarque.
+		FCM + Periodic task. -> se ele começar a rodar o foreground service, ele não entra mais em modo de standBy.
+		A gente não tem um limite de FCMs por dia, provavelmente, dado que somos um app muito usado
+
+		ps: será que poderíamos coletar isso com  getAppStandbyBucket().?
+
+
+Como criar grpo
+	entra https://staff-dev.buserdev.com.br/adm/login 
+	põe admin/password - se der erro, ignora
+	volta pra https://staff-dev.buserdev.com.br/
+	clique em "criar grupo"
+	preencha os campos, ponha 3 horas a menos por conta do fuso horário
+			status - travel_confirmed
+			rota - 117
+			Prencha o resto
+			Crie o grupo
+	Procure o grupo na lista ai do staff e entra na página dele.
+	poe um onibus, põe um motorista, o seu usuário, claro
+
+	acesse o https://dev.motora.buserdev.com.br/ e faça sua viagem
+
+
+PArada:
+	duração/distância tem que ser igual
+	tempo de embarque/tempo de parada tem que ser igual
+	E o checpointparada.checkpoint_destino_id == checkpoint.id
+
+	https://metabase.buser.com.br/question#eyJkYXRhc2V0X3F1ZXJ5Ijp7InR5cGUiOiJuYXRpdmUiLCJuYXRpdmUiOnsicXVlcnkiOiJzZWxlY3QgaWQsIHJvdGFfaWQsXG5sb2NhbF9pZCxcbmNoZWNrcG9pbnRfb3JpZ2VtX2lkLFxuY2hlY2twb2ludF9kZXN0aW5vX2lkLFxuaWR4LFxuZHVyYWNhbyxcbnRlbXBvX3BhcmFkYSBmcm9tIGNvcmVfY2hlY2twb2ludHBhcmFkYVxud2hlcmUgcm90YV9pZD01NTg0NlxuXG51bmlvblxuXG5zZWxlY3QgaWQsIHJvdGFfaWQsXG5sb2NhbF9pZCxcbjEgYXMgb2ksXG4xIGFzIGJ5ZSxcbmlkeCxcbmR1cmFjYW8sXG50ZW1wb19lbWJhcnF1ZSBmcm9tIGNvcmVfY2hlY2twb2ludCBjcFxud2hlcmUgcm90YV9pZD01NTg0NlxuXG5PUkRFUiBCWSBpZDsgIiwidGVtcGxhdGUtdGFncyI6e319LCJkYXRhYmFzZSI6Mn0sImRpc3BsYXkiOiJ0YWJsZSIsInZpc3VhbGl6YXRpb25fc2V0dGluZ3MiOnt9fQ==
+
+	Ai ficou discordante, no caso de cpParada com embarque, se o checkpointParada se refere ao cp após ele ou anterior.
+	()
+
+	todo: 
+		Adicionar is_parada_lanche no back pra todos.
+		Adicionar lógica de fundir 2 checkpoints dado certas condições. (duração, tempoembarque, tempodeparada)
+
+
+Negócio de mapa
+	Achar o link que fucniona - OK
+	Testar no PWA pra ver se gera um link melhor  - OK
+	verificar como fica no Flutter - OK
+	Formatos de mapurl
+		https://www.google.com/maps/place/Rua+Ribeiro+Pena+Praca+Candides/@-20.1401397,-44.8821428,18z/data=!4m12!1m6!3m5!1s0x0:0x28907e47872de3e8!2zUHJhw6dhIENhbmRpZMOpcw!8m2!3d-20.1408513!4d-44.8816998!3m4!1s0xa0a57c425a5af5:0x2175d8adeea9c8e5!8m2!3d-20.140556!4d-44.881702
+		https://www.google.com/maps?q=-21.784542,-46.5514358
+		https://www.google.com/maps/place/?q=place_id:ChIJw_zxDkGWpAARmlbYGbZ71XY
+		https://www.google.com/maps/@-29.9478525,-51.010022,3a,75y,184.69h,87.13t/	data=!3m6!1e1!3m4!1sV2Ek-YehgO-KukVyky-mqA!2e0!7i13312!8i6656
+		https://goo.gl/maps/8NKh7vwR465M7Xiy6
+
+Younder:
+
+	Estrutura:
+		Criar duas tabelas novas, 
+			EAD_info (user_id(fk), score(int), datetime_finished(datetime), provider_name(name), groups([]))
+				Copiar core_profile para ca.
+			
+					INSERT INTO mycopy(user_id, score, datetime_finished=now, provider_name='magi_cash')
+					SELECT user_id, ead_progress FROM mytable where magi_cash_id is not null ;
+
+			Younder (EAD_info(fk), score(int), datetime_finished(datetime), groups(str))
+				Uma entry por curso, se tiver a granularidade, se não, não vai ter.
+
+					INSERT INTO magi cash(curso_ead, score, datetime_finished=now, course_id, groups=[])
+					SELECT user_id, ead_progress FROM mytable where magi_cash_id is not null ;
+			Magi Cash (EAD_info(fk), score(int), datetime_finished(datetime), groups(str))
+
+
+	A fazer:
+		pegar a url do endpoint do younder.
+		Criar campo de edição no adm. 
+
+
+	Serviços:
+		get_course_link
+			'Obter Token'
+			younderID = check if younderID in profile, 
+			if not younderID:
+				register_user
+			groups_that_should_belong = check if it's driver/company
+			if 
+			return 'single SignOn'
+
+		register_user
+			companyToken = check if ID in profile.company
+			if not companyToken:
+				'criar Grupo' pra compania
+			'criar usuario'
+			salvar_db:
+				profile -> ead_info
+			'associar usuário ao grupo' - company e 'driver'/'parceiro' 				
+			salvar_Db:
+				ead_info -> younder()	 
+			# criar alguma forma de retry aqui, impedindo inconsistências
+			# se ainda assim falhar.
+
+
+		relatórios
+			Não tem docs
+
+
+
+	dúvidas:
+		Qual tempo de expiração do token? Deveriamos pegar para cada requisição ou pode cachear por x segundos?
+		o grupo é identificado como uma string - motorista e parceiro é fácil, agora nome de empresa muda, será que criamos com o nome, provavelmente não, guardamos essa key na própria empresa?
+		O unique identifier do usuário será guardado no novo profile.
+		Póssívelmente teremos que nos comunicar para adequar os campos de criação
+		Tem um ponto de edição de usuário, que permitiria pegar os casos de mudança de usuário.
+		A presença de motorista/parceiro vai criar uma certa complicação pro staff, é importante duplicar direitinho para num segundo momento extriar.
+		Erro ao associar usuário ao grupo, teremos usuário sem grupo, meter pro log.
+		Não tem docs.
+
+	certificar:
+		Nenhum campo da integração dependa de campo mutáveis
+
+
+	Temos um endpoint de autenticação que devolve um token  - idêntica à magi cash
+	O fluxo de login é idêntico ao atual -> desconsiderando o registro
+	a ID de criação do grupo é por string, portanto é mais fácil, não é necessário, a pri
+	Será que rola alguma hierarquia? Me parece que não. temos empresa e grupso motoras/parceiro.
+Análise do app do motora:
+
+	O back apresenta 4 estados de checkin.
+		checkin
+		checkinOtherDriver
+		checkout
+		checkinBus
+	Além do status do grupo
+		checkin_status
+
+
+	Estado:
+		Driverstate.step:
+			Lógica no front usando porrada de coisa do back
+		driverCheckedIn
+			Lógica back/front com db
+		showNextGroup
+			variável de estado
+
+
+	Fluxo:
+		antes: ---- etapa ---------------------- driver_state ---
+				Próximas Viagens ---------------   iniciar ------
+				Iniciar Viagem ------------------  iniciar ------  
+				while _:
+					Checkin ---------------------- checkin ------
+						tirar a foto. ------------ 
+					driver-is-driving
+					driver-is-resting	
+		agora:
+				Próximas Viagens
+				Iniciar Viagem
+				ou
+				preparar Onibus
+					tirar a foto.
+				while _:
+					Checkin
+					driver-is-driving
+					driver-is-resting	
+	
+	desafios:
+		Foto entra em pending operation
+
+	Foto representa uma pending operation, mas que parece que só reflete no checkinBus, que só altera o fluxo da câmera (impedindo a tiração de foto, mas que a princípio ok, né!)
+
+
+	driverstate:
+		iniciar - estado base.
+x
+TASK 391 Alteração de preços do Marketplace pelo parceiro:
+
+	
+	OS LOGS (TANTO NA ABA DE LOGS Quanto na popup) tem que tar ordenados de mais novos pra mais velhos, e não o contrário
+	O título da tab "Viagem fretamento não deveria ser, pois também há viagens de marketplace"
+	Manter o ícone de marketplace mesmo na aba rodoviarái
+
+
+	Aprovação com MIla:
+	- Quando mudar de aba na popup classe, em vez de confirmar o descarte das alterações, confirmar que vai salvar.
+	X Alteração de preço solicitada quando o usuário requerer a alteração.
+	X Ordenar por datetime_ida
+	X Qaudno a viagem for passada, tirar o cadeado, tirar na vdd ícones. 
+	X DEIXAR A TELA DE STAFF ACESSÍVEL APENAS PARA O COMERCIAL
+	X ID viagem no filtro do staff
+	X LOG's
+
+
+	X Endpoint do staff no back
+		Testes:
+			X Usar todos os filtros
+			x Alterar
+			X ALterar em massa
+	
+	Front do parceiro -> terminando.
+		x Mandar o pedido de alteração de classes pro back
+		x Mudar de trecho_Classe pra grupo_classe
+		x Mandar o pedido pro back de alteração de poltronas
+		x Impedir de modificar grupos com o lock
+		X Criar Mock
+		X Mandar endpoint do VL pro front 
+		x - Mandar apenas o pedido mais recente pro front
+		x - PErmitir que se altere apenas o pedido mais recente
+		x - Impedir de alterar pedidos já julgados
+		
+
+	solicitar_alteracao_preco
+		Fazer o esquema de softdelete aplicando a mudança de status na medida que novos pedidos entram.
+		def list_pedidos_alteracao_preco(filters, order_by):
+		    # PedidoAlteracaoPreco.objects.filter(status=~Q(cs))
+	    # PedidoAlteracaoPreco.objects.filter(trecho_classe__in=tcs).update('status', overwrite)
+
+
+	LOgs devem ficar pra segunda parte, talvez a parte do reprovado não esteja tão evidente quanto o aprovado/pendente. 
+
+	Logs:
+
+		Ver se da pra filtrar do activity log com ARQ dado que os pedidos de alterção de classe ficam em memória portanto não são facilmente acessíveis
+
+
+
+	endpoint dos logs no back -> não feito
+	
+	levar endpoints do logs -> não feito.
+
+
+
+
+	É necessário diferenciar entre alteração para todos os grupos de uma rota e para alteração para um grupo em específico (por exemplo, no caso de feriado).
+
+	Tomar cuidado com grupos com dezenas de paradas, levar isso em conta na UX.
+
+	Como alertar o parceiro do resultado de uma aprovação/reprovação de mudança de preço/vagas
+
+	É só de rodoviária ou não.
+
+
+
+	Vão ter 3 abas condicionadas há presença do vínculo marketplace.
+		Company-home -> Computed -> Pegar vínculo real.
+	Idealmente o Filtro ia fica a baixo das abas.
+	Precisa da informação de cada ônibus, as vendas e as cadeiras alocadas. 
+
+
+
+	todo:
+		10 Ver o código da rota se está correto.
+		10 Corrigir o método que chama o ícone dentro da rota.
+		10 fazer o checkbox no popup funcionar
+		8 Fazer também pra mobile.
+		6 Width is broken
+		3 Verificar se o search precisa rodar em toda mudança de tab.
+		1 Tem dois list onibus
+
+
+
+
+	 Alteração em massa.
+	Mostrará todos os grupos, conforme os filtros, portanto é necessário criar o texto no topo do filtro.
+
+	- Texto no topo mostrando os filtros.
+
+	Os grupos do popup serão exatamente os mesmos grupos da tabela, portanto eles estarão syncados, portanto a paginação terá que ser feita manualmente..
+
+	- Criar paginação syncada entre as duas tabelas.
+	  Como?
+
+	- Criar o save no canto superior direito.
+	  Copiar do staff/onibus
+
+	- Ter o dismissable helper azul - alert - qual o nome dese componente?
+	- Abrir a popup do confirmar
+	- Abrir a popup do "Concluído"
+	  Não precisa ser emmit, fazer na própria página
+	  Será que tem um componente igual a esse, apenas com confirmar?
+
+
+	- A alteração vai ter a mesma lógica que a popup, porém existe a possibilidade de salvar uma entrada apenas.  
+
+	Ter a tabela
+	- sem título
+	- id do grupo
+	- datetimeida do grupoo
+	- Início ao fim
+
+
+	1 - ATÉ QUANDO deixaremos o parceiro pedir alteração de preço?
+	  R: Talvez até o SLA (-48hrs)
+
+
+
+	 x esqueci de botar o desitno no staff
+
+	 x menos casa decimal na mudança %
+	 x ver logs não leva pra pagina de rupo
+	 X Na alteração em massa não está aparecendo as classes
+	 X tirar o tigrama da parte de alteração em massa.
+	 
+
+	 x A info da alteração em massa tem que ser mais legível.
+	 X status no staff tem de ser multi select 
+	 x Escrever algo na tela de logs quando não tiver logs.
+	 x ok Na ausência de gurpos slecionados, mostrar todos.
+	 X Quando seleciona-se algum grupo e clica em alteração em massa, não mostra os filtros.
+	 	x Nas viagens selecionados foram selecionados as seguntes viagens.
+
+	 ok - A pate de scroll nos logs não inclui os cards.
+	 
+
+	 ok Mudar a tela da staff pra mostrar todos com padrão filtro 
+	 ok O filtro do MKTPLACE pra origem e esitno não existe.
+
+
+	 ok Mandar code review da popup em massa.
+	 ok Mergear as partes
+
+
+
+	ok Fazer um teste do fluxo completo em ambiente de teste.
+	 ok Mnadar pra prod 
+Task 392 alterações em massa de preço de Marketplace pelo parceiro + paginação
+
+Dúvida Mila - FEITO:
+	"Lembram q na sexta perguntei quais regras estao por tras do codigo do "Grupo de Volta Obrigatorio"?
+	Alguem consegue me ajudar com essa info pra eu passar pra eles uma explicação?
+	Preciso entender o que acontece quando é selecionado um grupo de volta. Ex: documento de autorização da viagem é duplicado e anexado no portal parceiro"
+Task 154 - Relatórios componentes de avaliação:
+	FILTRAR FEEDBACKS SEM COMENTÁRIOS NO FRONT!
+	Fazer pagination.
+	Fazer teste do back pra página principal 	
+Task 45 retirar placa da staff - DONE:
+	ok
+	S
+Task 239 - Criar sinalização de novo aviso - DONE:
+	QUANDO NÃO TEM AVISO DA BUG.
+	QUal é o melhor jeito de fazer com que todas as migrações já iniciem como lidas no M&M? data_migration?
+	.
+Task 34 Criar alerta pra motorista via push - FOI PRO TOMIS:
+	Discussão:
+		O motorista a todo momento tem que ter até as três próximas viagens 
+		Se ele não tiver três e uma for adicionada, há de se criar uma notificação.
+		Criar um serviço que gera essa notificação pro motorista.
+		No backend isso é mais ou menos claro, cria-se um serviço que gera notificação 'Buser: Você está escalado para uma nova viagem!' e insere tal serviço na criação de viagens com a condicionante de se menor de 3 viagens escaladas.
+		No set_group_driver, em views_company, após a atribuição do motorista bem sucedida, chamar o serviço push new group to driver, nele, as verificações Notification Builder
+		Existe um grupo de serviços chamados driver_notifications_service, é ai que deveria estar nosso serviço.
+
+
+	Testes relevantes:
+		test_notifications_builder
+		test_staff_sendmessage
+
+	Serviços relevantes:
+		services/notifications/channels/push_svc
+		services/notifications/driver_notifications_svc
+
+
+
+	Mudanças:
+		criar um endpoint de teste.
+
+
+	Adicional:
+		DIscussão com Adonias e Tomino -  Então, na medida que o motorista iniciar uma viagem, removendo uma das próximas viagens de seu app, ele deve receber imediatamente a notificação da nova viagem? 
+			Podemos tantos realizar esse push tanto na criação da viagem quanto no início de uma viagem.
+			Alternativamente, seria criado uma task de celery que checa e manda as notificações de acordo.
+		Notificação ele deve ter infinitas, talvez fosse bom uma pop up ao ele abrir o aplicativo indicando que isso aconteceu.
+TASK 209 - Comentários do app do Motora
+
+	if there's not enought comments, it's going to show less.
+	Reminding that a bad comment contains the label 'motorista'
+					 good doesn't	 
+Task 4 criar dashboard no front p/ parceiros - FOI PRO VITOR:
+	ler pydantic
+	fazer form pydantic way
+	testar forms
+	testar todos os views
+	Medir a velocidade de retorno dos dados
+	REputation vs travelfeedback
+Task 19 portal parceiro - DONE:
+	criar nova coluna
+	criar nova coluna com data vencimento cnh e data vencimento do curso
+	30 dias antes da data, um aviso, contagem regressiva.
+
+	por vezes as datas sao diferentes, por vezes as mesmas.
+	Será que eu busco a fundo nesses dados.
+	OBSERVE: às vezes a CNH e o CURSO for a mesma data.
+	Clicar um link pra mostrar foto
+	Passar um relatoriozinho do que mudou.
+	Perguntar pra Gio se existe dados de uso de tela, configuração
+	O nome da aba seria relatório
+	Fazer as notas dos últimos envios.
+
+
+	Ver joins 
+	WALISSON -> DJANGO MASTER
+	renzo -> TERCEIRA OPÇÃO
+	YUri -> ḾT BOM EM DJANGO, PORÉM NAO ESPECIALIZADO
+
+
+	Talvez criar um componente com essa imagem de zoom (averiguar como fazer esse zoom)
+	migrar o dialog pro seu component, tavlez.
+
+
+	ADICIONAR POINTER QUE INDICA ALGO CLICÁVEL
+	:class="{ pointer: true }" class object vue
+	O dialogo deve ser retirado da tabela, ao clicar no span da foto, @click=abrir diálogo	
+Task 47 impedir mudança pós viagem - CODE REVIEW: 
+	Contextualização
+		Front:
+			Impedir que escale ônibus após a data de início da viagem
+			IMpedir  que escla emotorista após a data de início da viagem.
+				company-home -> popup-company-escalar-motorista
+		Back:
+			Impedir que escale ônibus após a data de início da viagem
+			IMpedir  que escla emotorista após a data de início da viagem.
+				company-home -> popup-company-escalar-motorist
+
+		Endpoints: 
+			  mudança de onibus
+			    path('api/company/groups/<int:grupo_id>/set_onibus/<int:onibus_id>', views_company.escalar_onibus_grupo),
+			    	Já há uma regra que impede.
+			    		ao que parece, necessita test
+		        path('api/company/groups/<int:grupo_id>/solicitar_onibus/<int:onibus_id>',        views_company.solicitar_escalar_onibus_grupo), (TLVZ)
+			        á há uma regra que impede.
+				    		ao que parece, >>>>>>>>>> AVERIGUAR <<<<<<<<<<<<<
+		      mudança de motorista
+		        path('api/company/groups/<int:group_id>/setdriver', views_company.set_group_driver),
+		 			esse tem que mudar, não parece ter nnehuma regra que impeça
+
+		 	todo:
+		 		Descobrir daonde vem esse solicitar_escalar_onibus_grupo ->
+		 			Será que esse endpoint precisa ser bloqueado tb? NÃO.
+		 			Existe essa regra padrão que, ao não poder, permiti-se a alteração emergencial.
+
+		 		Criar test para modificação de ônibus com - de 1 hora de antecedência pra viagem
+		 			será que existe?
+		 			EXISTE, test_regra_alteracoes.py
+
+		 		Averiguar se o endpoint setdriver tem alguma regra
+		 		implementar regra
+		 		criar test pra essa regra
+
+
+		Extra: test com timezones.
+			dentro de pytz.timezone(''), há 2 a serem testados.
+			'Brazil/Acre',
+ 			'Brazil/DeNoronha'
+Integração:
+		Ambiente de produção:
+		https://business.magi.cash/
+	endpoint das apis:
+	 	# são dois subdomíios diferentes dependendo do endpoint
+		https://api.business-user.magi.cash
+		https://api.business-questions.magi.cash
+
+
+	login:
+			
+		123456789
+
+	senha provisória da API:
+		senha_da_api
+	cadastrar a senha da empresa.
+
+
+
+	Estrutura:
+		Haverá uma área definida como motorista
+		Haverá uma área definida para cada empresa.
+		Haverá uma área definida por nível
+
+	Área:
+		qualquer tag associado ao usuário, empresa, nível, cargo
+
+	passos:
+		verificar se a empresa possui uma área associada
+		verificar se já tem login na magi cash
+			se não
+				criar usuário no 'criar usuário', inserindo a área
+			se sim
+				logar com o motorista utilizando o email e a senha da api
+					e.g.
+					eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZFR5cGVVc2VyIjoyLCJpZENvbXBhbnkiOjIwLCJpZFVzZXIiOjE5OTIsImVtYWlsIjoiZGV2cHJvZGRhbmllbEBlbWFpbC5jb20iLCJpZEFyZWFzIjpbNTZdLCJleHBpcmVzVG9rZW4iOjE2MjczMTk1NzcxMzYsImlhdCI6MTYyNzMxOTUxNywiZXhwIjoxNjI3OTI0MzE3LCJzdWIiOiIxOTkyIn0.l303WKA-D7-YLJSN5GE6ZiBED-XhFVoiXjNmIS6l6Mk
+					.
+		utilizar o "token" retornado na API anterior
+		o link de redirecionamento é: play.magi.cash/loginCompany/{{token}}
+
+
+
+	todo: 
+		mudar "cargo" dentro da pasta áreas para "áreas" 
+Task x - Automatização da validação de documentos:
+
+	Today:
+		Garantir que o 4 Esteja operando para que os outrs possam operar.
+		Por o TexTract Nos dockr-compose.
+
+
+	1 - OK - GERAR ANTT - Aceitação automática a partir da geração:
+		OK - Bloquear geração ANTT s/ moto/onibus - Bloquear Alteração ANTT - 	https://gitlab.buser.com.br/buser/buser_staff/-/merge_requests/457
+		OK - Implementado devidamente quando o cara tem o msm o CNPJ que a empresa - https://gitlab.buser.com.br/buser/buser_django/-/merge_requests/2275
+		Por um aviso ao mudar de motorista.
+		obs:
+			O caso da verificação do CNPJ foi feito pois é o único campo em que ele tem a opção				
+			Parceiros com mútliplos CNPJ's geram na nossa plataforma?
+
+
+	2 - GERAR ARTESP - 0% - extração a partir do HTML
+
+
+	3 - upload - 40% - Identificação
+		OK - Estrutura básica + ANTT - https://gitlab.buser.com.br/buser/buser_django/-/merge_requests/2205
+		instalar textract nos dockers
+		Testar com toads as autorizações.
+		ARTESP
+		outras
+
+	4 - OK - Mudança de Motorista/Onibus - Tornar aprovado com pendência
+		OK - Mudança de Ônibus
+		OK - Mudança de Motorista 
+		OK - Pedido de alteração
+		https://gitlab.buser.com.br/buser/buser_django/-/merge_requests/2275
+
+
+	5 - Ok - GERAR ARTESP - VERIFICAR SE REALMENTE NÃO DA PRA AVERIGUAR	
+Task N Remover placa de infoOnibus - DONE:
+
+	OBS: VERIFICAR INFOS.PLACA
+	TODO: procurar por infos
+		  procurar por hardcoded placa
+
+
+	BackEnd 
+		DONE -	models_company
+		DONE -	onibus_svc
+		DONE -	test_staff_onibus_actions
+		DONE -  serializer_travel
+		TODO -  rotina_svc
+	FrontEnd
+	Staff/Parceiro
+		DONE -	popup-artesp.vue
+		DONE -	select-escalacao.vue
+		DONE -	onibus.vue
+		DONE -	form.vue
+		DONE -	admin-onibus-item.vue
+		DONE -	placa.vue
+		DONE -	popup-homologa-placa.vue
+		DONE -	homologador-placa.vue
+		DONE -	form-rotina-onibus.vue
+		DONE -	admin-onibus.vue
+		DONE - 	admin-onibus-filter.vue
+		DONE - 	onibus-status.vue
+		DONE -	popup-homologa-onibus.vue	
+	Motorista
+		-
+	Data
+		TODO
+	Metabase
+		Todo
+
+	Dar uma segunda olhada pra ver se algo vazou.
+		TODO - 	back 
+		DONE - 	STAFF/PARC 
+		DONE - 	MOTORISTA 
+
+	Testar cada um deles.
+		TODO - 	back 
+		TODO - 	STAFF/PARC 
+			DONE -	popup-artesp.vue
+			DONE -	select-escalacao.vue
+			DONE -	onibus.Vue
+			DONE -	form.vue
+			DONE -	admin-onibus-item.vue
+			DONE -	placa.vue
+			DONE -	popup-homologa-placa.vue
+			DONE -	homologador-placa.vue
+			DONE -	form-rotina-onibus.vue
+			DONE -	admin-onibus.vue
+			DONE - 	admin-onibus-filter.vue
+			DONE - 	onibus-status.vue
+			DONE -	popup-homologa-onibus.vue	
+			
+		TODO - 	MOTORISTA 
+
+
+	Falar com tommy sobre retrocompatiblidade.
+Task 46 adicionar alerta mudança de leitos - DONE:
+
+
+	class Meta:
+		db_table = 'core_oldName'
+
+	Contextualização:
+		Falar ocm Tyrone, foi ele que fez isso.
+			TYRONE sugeriu:
+				renavan -> migrar pra usar infoÔnibus
+		InfoOnibus é um "documento/info" do onibus
+		Criar nova "choice" que vai tratar as capacidades.
+		CApacidade vendida é a o que pode vender.
+
+		TODO: Grupo também possui uma capacidade associada, aparentemente, investigar:
+			GRUPOCLASSE (indica uma classe do grupo)
+				grupo_crud_svc.update_group
+		A capacidade do GRUPO não é relevante para essa análise, apenas a capacidade do ÔNIBUS!
+	
+	Mudanças:
+		Passos frontEnd:
+			Criar nova tag em toda a cadeia até a tag assentos
+			Mudar a PopupHomologaAssentos
+			Verificar necessidade de apicall para telefone parceiro
+		Passos backEnd:
+			TDD!!!!!
+			Criar testes pra alerta modificar assentos
+			Criar serviço notificação de assentos.
+				Qual a lógica a ser implementada no serviço para que o alerta seja apropriamente criado.
+					Caso seja from_company = True
+					Caso não seja "created"
+					Caso mude o número de assentos.(comparar o antigo ônibus) 
+				Onde pode-se mudar as capacidade de ônibus -> vendidos/nominal.
+					onibus_svc.update_or_create_onibus
+						views_company.save_bus
+							'api/company/bus/save'
+		    				'api/company/bus/<int:bus_id>/save'
+					
+
+						views_staff.save_onibus - Não precisa!!!
+							'api/staff/onibus/save'
+					
+					escalar_onibus_svc.atualizar_grupoclasse_por_onibus (TALVEZ) - Não precisa!!!
+							views_company.escalar_onibus_grupo
+		   					views_company.solicitar_escalar_onibus_grupo
+
+	   				
+	Adicional - mudar nome do modelo e remover placa:
+		Mudar todos os lugares que usam placa do infoonibus para do onibus 
+			back
+				Onde a InfoOnibus é modificada:
+					onibus_svc.upload
+						views_company.upload ->     path('api/company/bus/<int:bus_id>/upload/<field>', 	views_company.upload),
+							views_staff.upload_doc_onibus -> path('api/staff/onibus/<int:bus_id>/upload/<field>', views_staff.upload_doc_onibus),
+					onibus_svc.update_or_create_onibus
+						views_company.save_bus
+						views_staff.save_bus
+			front		
+Task 103 Incluir marcação de Plataforma na criação de grupo - FAZENDO:
+	Exploração:
+		O objetivo desse primeiro momento é identificar como a marcação de baias interage com o motorista além de pensar num primeiro sistema de marcação de baias.
+		O problema parece que se resume a como modelar as baias da melhor forma dado o caos do tietê.
+		Definir a modelagem de dados
+		Pensar a partir das operações que serão executadas
+			criar_grupo -> 
+				check if baia ocupada.
+				get recurrent baia <-- some suggestion engine to standardize the baias for each group/rota
+				change baia
+		Não deve ser papél do analista criar grupos, não em primeiro momento.
+		ISso adicionaria um overhead imenso ao analista sem trazer um benefício simples de se ter.
+		A criação deveria ser automática -> talvez opcionalmente optar.
+		E deveria ser possível mudar no próprio grupo.
+
+
+		Endpoint no motorista -> Pegar Plataforma
+		Endpoint no staff -> Pegar baia.
+			Idealmente estaria dentro de cada checkpoint.
+
+		No Tietê a gente vai definir como se fosse apenas 3 baias, neste momento. Dado que os ônibus circulam
+		Cada ponto de embarque possui um número de baias associado.
+
+		Perguntas:
+			Como lidar com excesso de ônibus?
+				Sugestão: precise de confirmação especial para selecionar sem baia.
+			Como lidar com tiete?
+				Não fazer uma modelagem específica, é uma configuração muito alienígena, dizer que lá tem 3 baias, e quando isso for ser implementado, tomara que já tenham feito a reconstrução.
+			Como define os constrains de selecionar baia?
+				SErá feito um Grupo.objects.filter(date__ entre hora de saida + 10 min hora de saída - 60 min)
+			Como seŕá feito agora a modelagem:
+				Cada grupo terá um campo 'baia' associado, que será apenas um int.]
+
+
+		Saber com quem alinhar esses dados.
+
+	Pessoas relevantes:
+		matheus.barauna - Infra
+		Benício - rotas
+
+
+		https://metabase.buser.com.br/question#eyJkYXRhc2V0X3F1ZXJ5Ijp7InR5cGUiOiJuYXRpdmUiLCJuYXRpdmUiOnsicXVlcnkiOiJzZWxlY3QgKiBmcm9tIGNvcmVfcm90YSB3aGVyZSBpZD05NjYiLCJ0ZW1wbGF0ZS10YWdzIjp7fX0sImRhdGFiYXNlIjoyfSwiZGlzcGxheSI6InRhYmxlIiwidmlzdWFsaXphdGlvbl9zZXR0aW5ncyI6e319
+	Descrição:
+
+	Desenvolvimento:
+		Realizar um teste que, dado um grupo, atribua uma plataforma pra ele.
+		Realizar um teste que, dado um segundo grupo, atribua uma mesma plataforma pra ele (comportamento a ser definido)
+		Observar como o grupo é retornado para o motorista
+		avaliar qual a melhor forma de retornar essa informação também para o motorista.
+Task 120 - Tela de validação de documentos:
+	
+	
+	04/06 - Problemas
+		Não foi feita a mudança para o fluxo da impressão criar o autorizacaoGrupo
+			MERGEADO
+		É necessário rodar + 1x o script
+			script:
+
+				from commons.dateutils import to_default_tz
+				from core.models_grupo import AutorizacaoGrupo
+				entries = [
+				    [358814, '2021-06-04T14:04:19.29196-03:00'],
+					[820120, '2021-06-06T21:56:36.232749-03:00'],
+					[819664, '2021-06-05T16:35:40.740518-03:00'],
+					[819650, '2021-06-05T16:24:13.994416-03:00'],
+					[788825, '2021-06-05T21:06:34.76717-03:00'],
+					[242126, '2021-06-05T16:11:26.755353-03:00'],
+					[320525, '2021-06-05T17:14:47.659773-03:00'],
+					[356320, '2021-06-03T18:02:03.186951-03:00'],
+					[166036, '2021-06-03T14:23:09.123413-03:00'],
+					[480465, '2021-06-05T17:57:28.398084-03:00'],
+					[915661, '2021-06-06T21:10:46.930038-03:00'],
+					[359339, '2021-06-04T10:18:45.897697-03:00'],
+					[242579, '2021-06-06T16:19:52.402043-03:00'],
+					[358813, '2021-06-04T08:57:21.741623-03:00'],
+					[356350, '2021-06-04T18:54:40.633371-03:00'],
+					[239479, '2021-06-04T15:40:12.988805-03:00'],
+					[805713, '2021-06-04T15:22:09.629218-03:00'],
+					[921103, '2021-06-04T19:10:42.491003-03:00'],
+					[237220, '2021-06-05T10:11:45.002841-03:00'],
+					[300480, '2021-06-04T10:18:36.030493-03:00'],
+					[248608, '2021-06-04T11:47:53.990021-03:00'],
+					[366532, '2021-06-04T09:20:56.283294-03:00'],
+					[783400, '2021-06-04T13:10:51.301947-03:00'],
+					[250400, '2021-06-05T18:59:08.355834-03:00'],
+					[286295, '2021-06-04T13:40:50.828113-03:00'],
+					[148496, '2021-06-04T17:02:15.456322-03:00'],
+					[853527, '2021-06-06T17:25:14.830348-03:00'],
+					[788824, '2021-06-04T20:29:16.648704-03:00'],
+					[242115, '2021-06-03T15:36:22.886121-03:00'],
+					[819658, '2021-06-03T16:02:18.408588-03:00'],
+					[242280, '2021-06-04T11:58:20.313302-03:00'],
+					[788823, '2021-06-03T18:05:42.783524-03:00'],
+					[811999, '2021-06-04T17:48:29.780935-03:00'],
+					[764994, '2021-06-04T14:30:47.615664-03:00'],
+					[237219, '2021-06-04T09:52:49.788988-03:00'],
+					[917018, '2021-06-03T22:14:48.006074-03:00'],
+					[764967, '2021-06-05T16:00:56.931787-03:00'],
+					[820134, '2021-06-05T22:12:21.231262-03:00'],
+					[764995, '2021-06-06T17:55:46.193473-03:00'],
+					[170738, '2021-06-06T11:07:01.621679-03:00'],
+					[922338, '2021-06-06T18:13:22.341854-03:00'],
+					[922342, '2021-06-05T09:24:30.240526-03:00'],
+					[803317, '2021-06-04T16:38:26.102771-03:00'],
+					[830364, '2021-06-06T18:08:49.601291-03:00'],
+					[286297, '2021-06-06T14:51:13.357585-03:00'],
+					[783401, '2021-06-04T16:35:07.142479-03:00'],
+					[300482, '2021-06-06T13:58:12.244299-03:00'],
+					[250401, '2021-06-06T10:58:55.60614-03:00'],
+					[206426, '2021-06-06T19:45:48.707548-03:00'],
+					[356380, '2021-06-06T19:01:13.933899-03:00'],
+					[499284, '2021-06-07T08:54:44.766646-03:00'],
+					[244733, '2021-06-06T19:44:15.636657-03:00'],
+					[876446, '2021-06-04T15:54:25.045195-03:00'],
+					[148663, '2021-06-06T13:59:52.772084-03:00'],
+					[775558, '2021-06-05T17:17:02.53594-03:00'],
+					[820131, '2021-06-03T21:55:04.435283-03:00'],
+					[830367, '2021-06-04T18:26:02.8495-03:00'],
+					[775329, '2021-06-04T18:31:42.595132-03:00'],
+					[775337, '2021-06-05T10:49:29.299778-03:00'],
+					[777775, '2021-06-06T16:20:12.537727-03:00'],
+					[783398, '2021-06-03T14:38:06.775373-03:00'],
+					[783399, '2021-06-04T12:50:38.0465-03:00'],
+					[300242, '2021-06-06T14:16:35.662411-03:00'],
+					[178269, '2021-06-04T17:51:57.121918-03:00'],
+					[353693, '2021-06-03T21:31:40.114367-03:00']
+				]
+				list_of_objects = [AutorizacaoGrupo(grupo_id=id, uploaded_at=to_default_tz(datetime)) for [id, datetime] in entries]
+				AutorizacaoGrupo.objects.bulk_create(list_of_objects)
+
+			data:
+				https://metabase.buser.com.br/question#eyJkYXRhc2V0X3F1ZXJ5Ijp7InR5cGUiOiJuYXRpdmUiLCJuYXRpdmUiOnsicXVlcnkiOiJ3aXRoIGdydXBvc193aXRoX2F1dG9yaXphY2FvIGFzIChcbiAgICBzZWxlY3QgZy5pZFxuICAgIGZyb20gY29yZV9ncnVwbyBnXG4gICAgam9pbiBjb3JlX2F1dG9yaXphY2FvZ3J1cG8gYSBvbiBhLmdydXBvX2lkID0gZy5pZCBcbilcblxuXG5zZWxlY3QgZy5hbnR0X2dydXBvX3ZvbHRhX2lkLCBhLnVwbG9hZGVkX2F0IGZyb20gY29yZV9ncnVwbyBnXG5qb2luIGNvcmVfYXV0b3JpemFjYW9ncnVwbyBhIG9uIGEuZ3J1cG9faWQgPSBnLmlkXG53aGVyZSBnLmFudHRfZ3J1cG9fdm9sdGFfaWQgbm90IGluIChzZWxlY3QgKiBmcm9tIGdydXBvc193aXRoX2F1dG9yaXphY2FvKSIsInRlbXBsYXRlLXRhZ3MiOnt9fSwiZGF0YWJhc2UiOjJ9LCJkaXNwbGF5IjoidGFibGUiLCJ2aXN1YWxpemF0aW9uX3NldHRpbmdzIjp7fX0=
+		A interface da AutorizacaoGrupo está errada no front(deveria ser so autorizacao+grupo_id)
+			Resolvida.
+		A um problem com o emit, verificar se o request tá sendo propriamente preenchdio com o acima
+			Resolvido
+		Há um problem que todos os tz precisam ser os mesmos do datetime_ida do grupo
+			reolvido
+		Há um problema que às vezes o sentry estoura
+			resolvido, espera-se
+
+		Há um problema dos gráficos
+			RESOLVIDo, de certa forma
+		Hora 24 hrs
+		Datetime
+
+			
+	check:
+		É necessário rodar + 1x o script
+		Não foi feita a mudança para o fluxo da impressão criar o autorizacaoGrupo
+		A interface da AutorizacaoGrupo está errada no front(deveria ser so autorizacao+grupo_id)
+		A um problem com o emit, verificar se o request tá sendo propriamente preenchdio com o acima
+		Há um problem que todos os tz precisam ser os mesmos do datetime_ida do grupo
+		Há um problema que às vezes o sentry estoura
+		Há um problema de definir bem a partir de qual data o comercial vai poder olhar
+		Há um problema dos gráficos
+
+	Ćoisas a melhorar:
+		Paginator não tem delay, faz uma chamada para cada novo filtro.
+
+	Dados faltando:
+		status global
+		status individual
+			doc upload date - novo
+			embarque - grupo
+			desembarque - grupo
+			data da viagem - grupo
+			hora da viagem - grupo
+			placa do onibus - grupo
+			parceiro - grupo
+			razao social - company
+			motorista1 - grupo
+			motorista2 - grupo
+			obs
+		pdf 
+		no grupo:
+			ônibus:
+				onibus_placa
+			group:
+				doc_created_at
+				doc_status
+				antt_preview
+				artesp_preview
+				driver_one_name
+				driver_two_name
+
+
+	CheckList Frontend:
+		OK - Date picker
+		semi ok - Paginator
+		FALTA FAZER TEST BACK - filtros
+		debounce to avoid calling api each seocnd of filter
+		PROPS.GROUP.ITEM.CONTAR_DIA_PARADO
+		Permissões nos botões
+
+	CheckList:
+		ok - O icone de lápis é abre pop up 
+		ok - O comentário é pra ir pros logs DOS GRUPOS!!
+		ok - O filtro deve poder escolher múltiplos
+		ok - O menu dropdown do diálogo tá no figma em regras
+			NENHUM DOCUMENTO
+		OK - o campo de texto analisando é novo.
+		OK - Se um dos campos no diálogo estiver reprovado, o botão aprovado deve ser aprovado com pendência.
+		OK - Após clicar em aprovao desaprovado, ao reabrir-se a tela, caso cinza ficará verde
+		 Log tem que ser linjado ao grupo
+		ok - Edição vira log
+			
+		ok - toda modificação deve gerar logs
+		ok - se a licença for anexado DEPOIS DA VIAGEM, aparece o aviso da data. logo abaixo do dropdownm. SÓ AI
+		ok - o default estar okay.
+		ok - Toda VEZ que insere-se novo documento deve-se entrar no fluxo novamente.
+		Cada campo não aceito deve ficar na observação, que irá aparecer no buser cave.
+		ok - NÃO PRECISA VIAGEM DE MARKETPLACE!!!!
+			NÃO PRECISA APARECER VIAGEM CANCELADA!!
+		NÃO PRECISA VDraft: ER DIA PARADO - tá no portal parceiro - não sei onde - Rodrigão sabe.
+		NÃO PRECISA MOSTRAR VIAGEM NO FUTURO
+		NÃO PRECISA VALIDAR QUANDO É GERADA AUTOMATIACMENTE NO NOSSO SISTEMA
+		TROCAR DOC PRA AUTORIZAÇÃO EM UDO QUE É LUGAR 
+			front
+			back
+		passar o doc_status pra o odeo autorização
+		TUdo que é rejeitado não deve aparecer pro omercial
+		VER COMO PASSA REFERÊNCIA POR GRUPO
+		ver transaction só de curiosidade.
+
+		Gráfico 1 - por empresa: LIstagens dos gurpos (dados)
+		gráfico com número de coisas erradas na autorizações - Dados da empresa no périodo (gráfico)
+			 listagens por DATA	HORÁRIO	GRUPO	origem	Destino	onibus	motorista_1	motorista_2	Placa	Itinerário	Hora	Data	Motorista	Empresa	ERRO
+
+		parceiro
+		comerical:
+			Ranking das empreasas fixas
+
+
+		fixas e temporarias: números de divergencias
+		fixas: numeros de divergencias - passar pro comercial
+		empresa por empresa: manda pro gestor financeiro e pro parceiro
+Automatização dos docs:
+	verificar ANTT
+		funciona
+	verificar ARTESP
+		Tá indo.
+	Verificar Geração Automatica.	
+		https://metabase.buser.com.br/question#eyJkYXRhc2V0X3F1ZXJ5Ijp7InR5cGUiOiJuYXRpdmUiLCJuYXRpdmUiOnsicXVlcnkiOiJzZWxlY3QgZy5zdGF0dXMsIHR5cGUsIGEuZ3J1cG9faWQsIGpzb25kYXRhIGZyb20gY29yZV9hY3Rpdml0eWxvZyBhIFxuam9pbiBjb3J
+		lX2F1dG9yaXphY2FvZ3J1cG8gZyBvbiBnLmdydXBvX2lkID0gYS5ncnVwb19pZFxud2hlcmUgdHlwZT0nYXV0b21hdGljX2VkaXRfYXV0b3JpemFjYW9fZ3J1cG8nXG5hbmQgY3JlYXRlZF9hdCA-ICcyMDIxLTA3LTAzIDEzOjAwJyIsInRlbXBsYXRlLXRhZ3MiOnt9fSwiZGF0YWJhc2UiOjJ9LCJkaXNwbGF5IjoidGFibGUiLCJ2aXN1YWxpemF0aW9uX3NldHRpbmdzIjp7fX0=
+Task 106 - Motora Feedback:
+	Subiu o back, falta subir o front.
+	.
+Task 282 - [PARCEIRO] Formulário de Cadastro: Turismo e Rodoviária
+	dúvida:
+		Email, não existe email pra companhia.		
+
+	Andromeda:
+		todo:
+			Meta tags	.
+			Nginx configs didn't really work, using parceiro page for now.
+				ok
+			Check to see if path is relevant.
+			place holder de DDD, como fazer?
+			Placeholder https://buser.ghpages.buser.com.br/andromeda/componentes/ada-input/#exemplos-de-uso na real é o label.	
+
+
+		Andromeda.
+			Andromeda MR's:
+				Make v-select with default {{item}}
+				Make drop-down get input autoamtically
+				Make v-select default using slots.
+				Commit the put
+				Multi select.
+				Insert Form documentation
+				$andromeda.breakpoint não tá documentado.
+			radio
+				Fala com Luiz Otávio
+			Is there a grid system?
+				Não. Fazer manualmente.
+				Pra reduzir a quantidade de tags vs conteúdo -> melhorar SEO.
+				classes helpers. 
+					d-flex.
+					justify-content-center
+
+	Modificações:
+		OK!!! - No campo cidade base da sua empresa, criar uma listagem das cidades baseadas no estado.
+		Vitor fez isso, no portal do parceiro.
+
+
+		oK!!! - Verificar máximo de caracteres no banco de daods e por esse limite no formulário
+
+		oK!!! - Inscrição estadual é só número, criar validação para isso.
+			tem dependência no estado.
+			Talvez a mônica tenha um validador para este campo.
+
+		OK!!! - EM vez de celular, número fixo.
+
+		OK!!! - MIcro onibus e va não possuem tipo (disablar o input)
+		     OK!!!! opa. E só tem a classe executiva.
+
+		OK!!! - não fiz validação da placa
+
+		ANo de fabricação -> a lista deve inciiar no ano 2000
+
+		OK!!!! Na lista de licenças
+			OK!!!! aumentar o espaçamento
+			OK!!!! adicionar uma pequena linha divisório entre os itens.
+
+
+		OK!!! LImitar para 50 o máximo de classe
+		OK!!! E se o total for acima de 50, dar um erro.
+
+		OK!!! TEm o texto embaixo do tipo de empresa
+
+		OK!!! Se o cara mudar depois de adicionar um teim, dar um aviso pra ele.
+
+		OK - Adicionar a imagem .
+
+
+
+		DropDown disable -> ficar cinza
+		OK - Aumentar a imagem do obrigado
+		ok - Botar espaço em branco em baixo
+		ok - Adicionar a imagem certa;
+		ok - Ajeitar o enviar.
+		ok - nÃO Pmeritido mais de 50 assentos
+		OK MUAR A LISTAgem de 0 para 1.
+		ok Fazer a cidade da sua empresa -> breakpoint.
+
+		68 Onibus é o máximo
+		Leito cama -> máx 30
+		Leito -> máx 48
+		Semi - leito -> máx 68
+		executivo -> máx 68
+		Tirar a visibilidade do onibus interface
+		Tirar a cor do botão de exlcuir
+		itens pra items na interface
+		criar um nome melhor que salvar parceiro
+O caso do app dos parceiros 17/08:
+	Mandamos pra prod segunda/domingo a feature que estava marcada para terça.
+	Terça de manhã, Rodrigão avisa que tava travado.
+	COmeço a investigar e o Walison já me manda mensagem.
+	HIpótese inicial é que criou de todos
+	Começo a procurar soluções para facilitar a vida do Walison pq eu não poderia fazer nada, não tenho acesso a prod.
+	O walison não se comunica muito comigo
+	Pouco depois Walison percebe que na verdade tá rodando o tempo todo e me manda mensagens esparças.
+	Busco reverter o commit.
+	Modifico uma linha, mando pra dev, aparece que tem 400 modificações pra dev
+	Reverto no desespero.
+	Eu não sei bem se foi ok esse revert, falo pro Walison e ele me responde depois que foi bem.
+	Vi que o Iuri mandou uma solução pra dev.
+	Continua o problema, acho que o revert deve ter sido a causa do problema continuar.
+	Nesse momento estou extremamente confuso, não sei se o Revert tem problema, não posso acessar prod pra resolver, o problema parece continuar mesmo com o fix óbvio do Iuri.
+	Chamo o Tyrone que loga e começa a discutir o problema com outras pessoas.
+	Erle aparece na chamada e o Tyrone tá descrevendo um problema que eu nem sei o que é que é, mas nessa altura do campeonato eu tava tão desmoralizado que eu não queria entrar na frente de mais ninguém. Tava sentindo que eu tava só atrapalhando.
+	Erle e TYrone discutem calmamente e eu continuo sem entender pq aqela discussam, falam de poder gerar problema em migração, apenas acompanho. Peço pra falar com erle quando ele termina mas ele é assetivo em dizer que tá ocupado e que só depois.
+	Na medida que o Tyrone avança a solução, me parece cada vez mais que o Tyrone não entenedu a situação por completo.
+	A gente tá eseprando um commit subir e indo por um caminho que não faz sentido.
+	Eu explico a situação mas ngm me da ouvidos, litralmente, ngm responde.
+	Pouco depois Daniel Elias entende e comenta como a gente poderia resolver o problema dado a descrição que eu dei, Tyrone ainda não captou.
+	Nesse momento brota geral de ARQ comentando a situação, inclusive o IUri xingando. TOdo mundo entra na chamada de uma vez só.
+	Erle orienta a gente a fazer a solução proposta pelo o Elias e a gente aguarda o deploy, eu to tendo pra caralho, o resto da galera não fala nada, só o TYrone faz umas piadas.
+	Quando acaba o deploy, surpresa, o problema não foi resolvido, ngm sabe bem pq, a gente observa o deploy e descobre que uma mudança que o Erle fez 2 dias atrás tá fazendo com que todas as task periódicas não se atualizem, o celery tá 2 dias desatualizado.
+	Iuri fala preu resolver isso de algum jeito e eu fico confuso, kkkk, tava bem aralisado. ELe fala pra mudar no front e eu corro pra mudar.
+	Faço um CR Rapidão e mando e fico acompanhando a resolução do Celery pela galera de ARQ.
+	o CR demora horas pra subir, literalmente 40 minutos.
+	Finalmente sobe e e urelaxo mais tranquilo.
+	Acompanho o consertar do celery e os avisos param de ser produzidos.
+	Saio da Call e vou almoçar.
+Onboarding - o que falta - FAZENDO:
+	Adicionar nos canais.
+	subir pwa + flutter + back.
+	Terminologia
+	Introduzir em todas as ferramenta
+		Sentry:
+			Mostrar o básico
+		Kibana:
+			Mostrar o básico
+		Metabase:
+			Mostrar o básico.
+		HoneyComb:
+			Mostrar que existe.
+		aliases:
+			passar os aliases
+			Mostrar como usar com back 
+			Dar o bizu do ADM
+			mandar um dump do banco.
+		Django overview:
+			some general reference -> ask to do a basic tutorial if not famliar
+			TDD
+		Vue overview:
+			Ask him to do the tutorial if not familiar
+			Vue Dev Tools
+				Como abrir o componente
+			Mostrar como destravar o motorista
+			debugger -> mostrar como usar.
+		VSCODE:
+			breakpoints
+			launch.json
+			extensões
+	
+		introdução dos ambientes de teste 
+	modificação do tipo de usuário e atribuição de parceiro/staff/motorista
+	Fazer as pessoas verem o guia de modelos do Tony - https://www.youtube.com/watch?v=YFl1J-evBM0&ab_channel=TonyL%C3%A2mpada
+    Adicionar o usuário como motorista 
+    https://docs.google.com/spreadsheets/d/1vdAozskxZOeGZD6g16Q30s-cSJAuMltvdB0xh1fXpyU/edit#gid=794723249
+	Expectativas, introdução a cultura da empresa de empresa
+	Como: Pair Programming
+Tech Talks - Tyrone (estruturas de dados):
+	"queue" modulo -> Pilhas e filas
+		queue, lifoqueue (pilha), priorityqueue 
+	"collections" 
+		deque (fila de duas pontas), defaultdict, orderedDict, Counter (dict com contagem), namedtuple
+Sonho da Gio:
+	Atribuir infrações na medida que o motorista fizer merda -> Guaradr infrações dos motoristas
+	Quanto motorista fizer merda demais -> atribuir curso ao motorista
+
+
+	O que a gente precisa, a princípio ->
+		Atribuir e desatribuir curso/algo semelhante ao motorista
+	Ser avisado quando o motorista concluir um curso, algo assim
+		Web hook ou algo assim
+		Endpoint pra verificar o estado do curso - completude etc etc - a princípio ok, temos o relatório por ID
+	Receber relatório de motorista
+		Tb okay.
+HR - Lucas:
+	introdução - 5 min
+	codigo - 30 min
+	perguntas - 10 min
+	sobre a buser - 10 min
+
+	performance
+	qualidade de codigo
+	problem solving
+	comunicação
+	time que torce
+
+	Opiniões:
+	Ensino médio comecei a pegar como hobbie
+	Fiz junto do médio mecatrônica que incluia aulas de programação. -> matéria de lógica.
+	Trabalhou desenvolvimento de chat bot usando NLP
+	Desenvolvidor interno pra people team
+	mais confortável com python e typescript
+	GITLAB ci/cd em projetos pessoais
+	usou SQL Um pouco, só um pouco de agrupmaneto
+	mês passado começou a estudar google cloud platform
+	"To tentando aprender RUST"
+	O setup do vscode demorou horrores, ele criou a pasta no terminal, abriu um poetry
+	People team		
+		PHP
+		PYTHON
+		FRONT END - eu mesmo
+	A comunicação dele é bem restrita.
+	Não conseguiu terminar problema
+	Dúvida, viagem -> viajar pra algum escritório/encontrar com cliente.
+	Não é esperado que eu tenha que ir pro escritório, perguntou ele.
+	Gerecnaimento de projeto, jira/trello? Perguntou ele.
+	Abrimos espaço pra perguntas, ele realmente não teve muito o que perguntar.
+	Demos sugestão, mesmo assim não teve muitas perguntas.
+	o cara não lembrava onde ele usou matplotlib, pandas, numpy. Falou dum curso no udemy.
+	Erle perguntou sobre pandas para 100gb de dados em um pc com 64gb, ele sugeriu usar streams/generators.
+
+
+
+
+	perguntas:
+		Fala dos seus hobbies e do seu tempo livre.
+		VocÊ poderia descrever o que é a People Team
+		Se puder descrever um pouco mais a fundo seu dia-dia NLP
+		Typescript, onde você usou?
+		VOcê tem algo em vue que você poderia mostrar
+		Cê já fez algo em electron?
+Buser Talks - Infra - thiago
+	Pontos de parada!
+
+	Infra, BackOffice, Real State e PRojetos, Field
+	
+	REGIONAL - Marina HOrtvarthy(Ir SP e outros) e PEdro ( RIo, VITÓRIA e pá)
+		Eles vão nos pontos
+		CUdado dos busers passagens.
+
+	Field: Jana:
+		Tá lá pra salvar
+
+	BackOffice - Marinão:
+		Mudança de PDE - demanda vem de feedback, rotas, comercial, parceiro (tem bastante contato)
+		Feedbacks pax (SEgurança, localização, estrutura e + 1) - passa pro regional pros caras fazezrem algo.
+		Lançamento financeiros - 
+		Interface com Tech - Luccas é o dedicado a eles.
+		Outros - (breve) padronização dos pontos de parada.
+		Aplicação de multas - se fizer merda tem multa financeira, política de multa e rentenção.
+			QUem aplica a multa é o comercial
+			Matheus Baraúana fica de olho no Tiete 
+
+	Como escolher novo PDE:
+		Dados para caralho
+
+	ROADMAP:
+		Quer se transformar num HUB De realState
+		Desenvolver negócios em torno do ônibus/hub (hotel, garagem, encomendas
+Comercial - Buser Talks:
+	Savinho
+
+	Cris, Ana e gui - fazem minas, rio e ES. Ficam em BH
+	guilherme schdmidt, iane, rebeca, jorgito - o resto. Ficam em são José
+
+	Captar, negociar e gerir parceiros.
+
+	três fase:
+		FASE1:
+			prospecção
+				formulário buser.com.br <--- inserção dos ônibus dos parceiros
+				indicação pelos parceiros
+				prospecção nos mercados
+			Entrevistas
+			análise dos carros, docs, etc
+
+		FASE2:
+			Análise advinda de rotas/demanda
+			negociação dos valores do frete com os parceiros
+			treinamento, qualidade
+			(pedágios, a rota (se é fodida ou não), frequêcia, etc)
+			análise de documentação extra pra buser passagem
+			integração caso seja buser passagens
+
+		FASE3:
+			toda quinta feira é pago o frete
+			análise do bônus mensal <- 3% do faturamento.
+			fazer o relacionamento com o parceiro.
+
+	Empresas:
+		168 fretamente + 36 Buser passagens
+	Onibus:
+		327 fretamento + 202 BP
+	Frete pago:
+		58kk
+		
+	
+	dúvidas: então as empresas no fretamento são pequenas, média de 2 ônibus por empresa
+			E BP tem empresas bem maiores?
+Risco e Contingência - BO - busertalks:
+	tipos de BO;
+		notificação vs apreensão:
+			notificação o ônibus não é apreendido, e os passageiros não são deixados na rodoviárias, tem que dar jeito
+			notificação é artesp, apreensão é ANTT
+
+	procedimento:
+		- Entrar contto com motorista pra entender a situação (às vezes cheega por outro)
+		- Informa nos grupos sobre o caso
+		- Encontra e negocio soccoro para o transbordo
+		- Solicitar o seguro para o transbordado
+		- Realizar o report do ocorridos
+		- Outros (e a volta do grupo? infos pros passageiros, motoras)
+
+	pós BO:
+		- remanejo dsa próxs viagens que dependiam do bus
+		- pós apreensão, orientar o parceiro
+		- multas notificações
+		- solicitar pagamentos dos transbordos no buser-fins.
+
+	pt de inteligência:
+		dados vem do query 2206 no metabase.
+Imersão LPC:
+	O que é e pra que serve?
+	Caio Franco (LPC)
+		legal, public policies, communication
+		juridico, políticas públicas, relações institucionais
+	heads:
+		head legal - giovani ravagnai
+		head of policiy regulatory - juliana natrielli
+		communic - fabio schivartche (chivas) ou flavinha
+	legal:
+		funções:
+			Tradicional:
+				Garantir segurança operacional 
+				Buscar eficiências financeiras operaciona
+			buser/startup:
+				permitir a sobrevivência diária do modelo no curto prazo -> batalhas judiciais, garantir a sobreviência da empresa.
+				ser invisível -> o objetivo é que tudo ocorrese perfeitamente
+		pra que serve:
+			corporativo (non industry-specific):
+				olhar o tributário, trabalhista, IP
+			regulatório (industry-specific):
+				na buser, entende-se de transporte.
+
+		obs: o legal na buser é corporaativo, não é regulatório -> ele é public policy
+
+	Public Policy:
+		credibilidade: relações governamentais
+			você quer se engajar na criação de leis, você quer sentar na mesa decisório (paradigma tradicional)
+		legitimidade: políticas públicas, mobilização social
+			- você quer se tornar referência pra sua opinião não apenas ser ouvida, como respeitada.
+			- mobilização social significa a organização com parceiros, fretadores, além de uma mobilização socal dispersa na ponta, nos clientes. Como mobilizar os clientes pra enviar emails pra ag. reguladora.
+	Communications:
+		pr (imprensa)
+		comunicação com terceiro (social media, organizações)
+		mkt (flávia é a head)
+		demandas
+			pautas positivas: 
+			pautas problemáticas: fake news, problemas na midia, toda a parte de gestão de imagem ruim
+Imersão FIN:
+	Head é a Júlia Salgado
+	Accounting (financeiro), FP&A e facilities(bens)
+	Accounting:
+		ÉLcio, lider
+		Stefani é a que devemos recorrer 
+		O financeiro normal, pagamento, etc.
+	FPA:
+		Líder, Yano
+		Consome as informações do contábel e outras áreas.
+		Análise e estratégia de negócios.
+
+	Facilities:
+		Garantir que as pessoas trabalhem com recursos
+		escritórios
+
+	Para pedir com negociar com fornecedor, comprar coisas, c
+
+	Pedir bruno kloss acesso.
+Regex
+	python regexes
+	. - any character except new line - to match new line read re.DOTALL
+	\ - escape char, escape any wildcard
+	^ - beggining of the line
+	$ - end of the line
+	* - match the preivous char, from 0 to many times
+	+ - match the preivous char, from 1 to many times
+	? - match the previous char, 0 or 1
+	{n} - match the previous char, n times
+	{n, m} - match the previous char, from n to m times
+	[abc] - match either a, b or c
+	[a-z] - match char from a to z
+		you can use [a-c], [b-g], etc
+	[a-z0-9] - match any char or number
+	a|b - match a or b - use parenthesis to speific what
+	() - capture groups
+	^a - match anything excepts a
+	\w - match any alphanumeric (the same as [aa-zA-Z0-9_] incluindo não ascii)
+	\d - match any numeric (the same as [0-9])
+	\D - match any non numeric char (the same as [^0-9])
+	\s - any whitespace (acho que tab tb)
+	\S - any non whitespace
+	metacharacter não são ativos dentro de []
+Discovery com Bruno person:
+	Marty cagan -> o uncle bob de produto. 
+
+	O que é preciso para melhorar o processo:
+		OKR bem definido - tem que estar atrelado a um objetivo de negócio.
+		KPI para acompanhar
+		stakeholders - PM, PD e devs juntos!
+		Dual track agile.
+
+		Processos:
+			definição do OKR.
+			Jobs to be done
+				Entender qual problema o produto resolve e tornar ele mais eficiente em resolver o problema.				
+			double diamont
+				2 etapas:
+					macro etapa Problema:
+						descobrir o problema - Research
+						definir o que é o problema - Insight
+					macro estava solução:
+						Desenvolver - Ideation.
+						Entregar - Prototype.
+				Triple diamond:
+					Às vees adiciona desenvolvimento, teste e roll out.
+			design sprint
+
+			lightining decision jam
+				5 min de coisas que estão bem
+				5 in de coisas que estão impedindo o resultados.
+			opportunity solution tree
+				.
+			dual track agile
+				2 ciclos
+				para passar pro segundo: 
+					gera valor ? PM
+					é viável ? Tech
+					É usável? PD
+
+
+VISÃO:
+
+	os problemas - https://whimsical.com/2021-06-parceiro-motora-outputs-do-blueprint-9xPqkWsmvnu76HniUJxJt8
+	As limitações técnicas:
+		O app do motora
+			- muita coisa doida, pouco entendimento
+			- O ado tem o mapa dos fluxos
+			- Pra refatorar, precisa-se desenvolver uma visão de ARQ.
+			- pra refatorar, precisa-se desenvolver um por quê.
+				A experiência de desenvolviemtno é pobre
+					Trava pra caralho.
+					Existe muito pouca padronização de onde estão as coisas.
+					Design é bem ruim
+					O UX vai ser refeito.
+					O número de erros no Sentry é altíssimo.
+			- Pra refatorar, precisa-se fazer de forma segura.
+
+Migração nextGroups.
+	perguntar ao Iuri sobre activitylog sendo migrado
+	O descanso do motorista, pertence a nós?
+	Infrações do motorista, pertencem a nós?
+	https://gitlab.buser.com.br/buser/torre-de-controle/-/merge_requests/15
+	https://gitlab.buser.com.br/buser/buser_django/-/merge_requests/6699
+	Falar sobre a possibilidade de ser por fila on update que iniciariamos só nos triggers que importam pro motorista, mas eventualmente teriam mais triggers. - OK
+	grupo
+		Criar o mecanismo de ouvi
+		filtrar os que tem driver e são travel_confirmed.
+		A gente vai ter que escrever em algum lugar.
+	lista de passageiros
+		API cacheada
+		vs 
+		Fila/Stream - eu não sei o que é isso, ler do rabbitMQ.
+		Filtrar viagens śo nas próxs 24 hrs.
+
+
+

@@ -1,0 +1,37 @@
+Eden (eva-tech / EdenMed)
+- Healthtech mexicana, produto principal é um PACS (sistema de imagens médicas) SaaS multi-tenant
+- Fundada em 2016
+- ~440 funcionários (LinkedIn, 2026)
+- Captou ~$39M em 3 rounds (investidores: YCombinator, SoftBank, Sierra Ventures, Kaszek, Khosla, entre outros)
+- Escala: usada por clínicas e hospitais em toda a América Latina e EUA
+- Stack: Python/Django, GraphQL, PostgreSQL, Redis, WebSockets, LangGraph, OpenAI, Claude
+- Ambiente com alta responsabilidade sobre dados sensíveis (imagens médicas, compliance, pentests)
+- Time distribuído, trabalho remoto
+- Produto técnico e complexo, com muita integração entre sistemas (DICOM, HL7, middlewares)
+- Cultura de ownership: engenheiros operam o que constroem, do design ao prod
+
+---
+
+Inoa Sistemas
+- Fintech/infraestrutura financeira brasileira, foco em mercado de capitais
+- Fundada em 2008
+- ~151 funcionários (LinkedIn, 2026)
+- Sem rounds públicos conhecidos (bootstrapped/privada)
+- Produtos voltados a gestoras, corretoras e custodiantes
+- Migração de sistemas legados para plataforma SaaS foi o projeto central durante o período
+- Stack: Python, Django, microsserviços
+- Ambiente regulado (CVM, B3), com exigências de auditoria e rastreabilidade
+- Time pequeno, cultura de generalistas — engenheiros tocavam desde backend até infra
+
+---
+
+Buser
+- Startup brasileira de transporte de passageiros (fretamento colaborativo)
+- Fundada em 2017
+- ~300 funcionários
+- Captou ~$143M em 4 rounds (investidores: SoftBank, Globo Ventures, Valor Capital, Monashees, Canary)
+- Crescimento acelerado, ambiente de alta pressão com times enxutos
+- Stack: Python/Django, APIs REST, PostgreSQL
+- Foco em produto de consumo em escala nacional
+- Cultura de startup: velocidade, pragmatismo, foco em resultado
+- Problemas de escala reais: performance, concorrência, disponibilidade
