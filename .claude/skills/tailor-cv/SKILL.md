@@ -18,3 +18,15 @@ The user wants to tailor the CV for a specific job or role. Follow these steps:
 6. **Report** what was changed and why, so the user can review.
 
 Keep the CV honest and concise. Do not bloat it.
+
+7. **Humanization pass** — only on the lines/sentences you changed, do a final review to make them sound like a real person wrote them:
+   - Replace "—" (em dash) and "…" (ellipsis) with plain alternatives (a comma, a period, or just rewrite the sentence)
+   - Remove or rewrite any text in *italics* — real CVs rarely use them
+   - Break up overly parallel structures ("Led X, achieving Y. Designed Z, resulting in W.") — vary the rhythm
+   - Cut generic AI phrases: "passionate about", "results-driven", "dynamic environment", "leveraged", "spearheaded", "seamlessly"
+   - Mix sentence lengths — short sentences are fine, not everything needs to be a clause chain
+   - If something sounds like it was written to impress a robot, rewrite it to impress a human
+
+   - Read the untouched parts of the CV and mirror the tone, vocabulary, and sentence style already used there. If the existing bullets are short and direct, keep yours short and direct. If the original uses "built" instead of "developed", use "built". Match the voice, don't introduce a new one.
+
+Do NOT touch lines that were not changed — only clean up your own edits.
