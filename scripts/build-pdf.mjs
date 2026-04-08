@@ -6,8 +6,8 @@ import { marked } from 'marked';
 
 const CHROME_BIN = process.env.CHROME_BIN || 'google-chrome';
 
-const EN_TARGET = { input: 'en.md', output: 'en.pdf', lang: 'en' };
-const PT_TARGET = { input: 'pt.md', output: 'pt.pdf', lang: 'pt-BR' };
+const EN_TARGET = { input: 'en.md', output: 'danielpassy_cv.pdf', lang: 'en' };
+const PT_TARGET = { input: 'pt.md', output: 'daniel_passy_cv.pdf', lang: 'pt-BR' };
 
 marked.setOptions({
   gfm: true,
