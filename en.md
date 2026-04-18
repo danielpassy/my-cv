@@ -8,7 +8,7 @@ Rio de Janeiro - Brazil
 
 ## About
 
-Backend developer with full-stack experience. Interested in business aspects beyond technical work. Communicative, curious, and collaborative. Seeking challenges and opportunities for technical growth.
+Full-stack engineer with experience owning production systems end-to-end across fintech, healthtech, and transport companies. Has built backend services, APIs, and frontend applications, and taken direct responsibility for production stability, incident response, and architectural decisions under real constraints. Interested in the business side of technical work.
 
 ## Professional Experience
 ### Backend Developer - Eden
@@ -17,7 +17,7 @@ Backend developer with full-stack experience. Interested in business aspects bey
 - Designed and implemented third-party system integrations supporting critical business workflows, from API design to production operation.
 - Built and evolved backend features across multiple services, working directly on application code, GraphQL API contracts, and database models.
 - Led performance and scalability optimizations on high-traffic services, reducing latency and infrastructure costs.
-- Developed an AI-powered medical report generation system using LangGraph and LLMs (OpenAI, Claude), implementing intent classification, prompt engineering, template retrieval, and real-time streaming over WebSockets on a Django/Redis/PostgreSQL stack.
+- Integrated LLM tool calling (LangGraph, LangChain, OpenAI) into the main application and built the supporting test infrastructure, including an evaluation client that runs parallel fuzzy-match comparisons across sample sets, so the ML team could iterate on the AI system independently.
 - Addressed findings from penetration tests and security audits, implementing fixes related to cloud security, access control, and hardening of critical production systems.
 - Worked in a security-sensitive environment with direct responsibility for remediation, production stability, and protection of critical data flows.
 
@@ -27,7 +27,7 @@ Backend developer with full-stack experience. Interested in business aspects bey
 #### 09/2023 - 05/2025
 
 
-- Played a leading role in migrating systems toward a SaaS platform model.
+- Led the migration of a financial analytics platform, serving asset managers, brokers, and custodians, toward a SaaS delivery model.
 - Built and maintained Python/Django services and frontend screens in Django admin, including internal forms and operational pages used by product teams at scale.
 - Designed and maintained platform-level tooling: build systems, CI/CD pipelines, caching, tracing, logging, queues, and test frameworks.
 - Migrated legacy Jenkins pipelines to GitHub Actions, centralizing and standardizing SaaS deployment workflows.

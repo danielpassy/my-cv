@@ -1,0 +1,14 @@
+Olá, time da Dadoteca,
+
+Python é minha linguagem principal desde o início da carreira. Nos últimos cinco anos construí e operei APIs e serviços backend em Python em três empresas, em ambientes distribuídos e cloud native, com Docker e deploy em nuvem. Django foi meu framework principal em produção, e tenho projetos pessoais em FastAPI.
+
+Na parte de ML, trabalhei no sistema de geração de laudos médicos da Eden usando LangGraph, orquestrando chamadas a LLMs (OpenAI e Claude) num pipeline com classificação de intenção, recuperação de templates e streaming de tokens em tempo real via WebSocket. Também construí uma ferramenta interna de testes para modelos proprietários da empresa.
+
+PostgreSQL é outro dos meus pontos fortes. Na Inoa trabalhei na migração de SQL Server para PostgreSQL, lidando com schema, índices e adaptações no ORM. Na Eden e na Buser passei boa parte do tempo otimizando queries pesadas, estudando planos de execução e comportamento do planner.
+
+Em CI/CD e Git, trabalhei com GitLab CI e GitHub Actions, e migrei pipelines de Jenkins para GitHub Actions na Inoa. Meu conhecimento mais profundo de Git veio de um problema real: na Inoa tínhamos muitas ramas simultâneas gerando conflitos recorrentes, e acabamos montando um sistema proprietário de gerenciamento de branches para resolver.
+
+A oportunidade de aprofundar em deploy de ML me chamou atenção, e o resto do projeto encaixa bem com o que venho fazendo: escopo de 4 meses definido, stack Python cloud native.
+
+Att.,
+Daniel

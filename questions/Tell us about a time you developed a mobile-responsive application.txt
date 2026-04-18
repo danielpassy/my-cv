@@ -1,0 +1,9 @@
+At Buser, I worked on the driver app for about two years. Our users were bus drivers, most of them with no real tech background and a genuinely hard time using a smartphone. The tech team ended up playing a lot of the designer and PM role alongside building.
+
+Rolling out new features was always a challenge. We'd ship something and discover that what seemed obvious to us was completely unclear to them. We ran events, visited bus company offices, sat with drivers while they used the app. Those sessions changed a lot of what we built and how we built it.
+
+On the technical side, the app was old and had accumulated a lot of complexity. It ran in places with limited connectivity and had to manage a lot of state across different stages of a trip. Connectivity on Brazilian highways drops constantly, and the multi-state nature of the app, check-ins, driver status, trip progress, made it easy for things to get out of sync. Debugging those issues was painful and downtime was frequent.
+
+I introduced end-to-end tests with Cypress and frontend unit tests, which hadn't existed before. That cut downtime significantly and gave the team confidence to ship faster.
+
+After stabilizing things, I led the migration from the PWA to Flutter. The main driver was data collection: the PWA couldn't reliably give us the device access we needed for GPS tracking and sensor data. The migration ran gradually, both apps in parallel, moving users over slowly to avoid a hard cutover.

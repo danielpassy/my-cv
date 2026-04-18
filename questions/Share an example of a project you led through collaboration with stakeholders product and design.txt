@@ -1,0 +1,8 @@
+At Eden, our main product was a report platform where doctors write diagnostic reports for X-rays and other studies.
+Product wanted to build a template system so doctors could reuse common report texts instead of writing from scratch every time.
+The initial design treated templates as full report replacements. You pick a template, it fills the entire report.
+As I was developing it, some questions arose around usage and corner cases. Like, what if the doctor had a template for describing a vertebrae fracture but wanted to keep their own introduction? It would overwrite everything.
+The design changed from full-report replacement to blocks that could be inserted into specific sections of the report.
+Product took that back to the client, validated it, and we went back and forth a couple more times.
+We ended up with templates as reusable blocks that could be either inserted into specific parts of the report or be the whole report.
+It matched much better how doctors actually write reports.

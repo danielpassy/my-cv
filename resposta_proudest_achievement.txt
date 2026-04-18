@@ -1,0 +1,12 @@
+When I joined Eden, they had New Relic for observability but also a self-hosted Sentry instance that wasn't being used for tracing. 
+I set up Sentry tracing and it surfaced performance bottlenecks much quicker.
+I started profiling the main endpoints, fixed some N+1 queries, batched some calculations.
+But then I noticed something bigger: every query in the system was multi-tenant, and each one individually hit ElastiCache to retrieve the user's permissions. Each call was fast on its own, but they added up across every request.
+My solution was to use thread-local storage to load the user and permissions once at the start of each execution and clean it up at the end. The concept was simple, but the hard part was verifying every execution mode: Celery workers, Postgres listener, the web server, tests, and making sure the context was correctly populated and correctly cleaned after execution in each one, so there was no risk of tenant data leaking between requests.
+
+After deployment, we had zero bugs (yes, that's hard to believe, but it was) or failures from the change. 
+The whole system latency dropped 7%.
+Cache usage dropped by 97%. 
+And the pattern opened up a new way of optimizing, it was later applied to our heaviest data pipeline, reducing its average time by 25%.
+
+Another notable one was setting up an extensive alarm system at Inoa with deploy trackability, which reduced our incidents by over 90%.

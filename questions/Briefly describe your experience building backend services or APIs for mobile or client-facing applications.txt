@@ -1,0 +1,1 @@
+My main focus at work is backend services, I've built them at every company I worked at. On top of that, a lot of work around databases, cloud infra, and CI pipelines. At Buser and Inoa I worked on both mobile and web. At Buser specifically, I also did frontend development on a PWA and a Flutter app.

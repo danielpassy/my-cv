@@ -1,0 +1,14 @@
+Hi CharterUP team,
+
+When I saw this role, I realized I've already worked on your problem. At Buser, a Brazilian bus marketplace often compared to FlixBus or "Uber for buses," I spent about two years as a full-stack engineer and then tech lead. I built backend services for the same kind of two-sided marketplace you're running: passengers on one side, bus operators on the other, with routes, schedules, driver apps, and all the messy operational reality that comes with group transportation.
+
+A lot of that work was about APIs for mobile. I built and owned the backend that powered the driver app, which migrated from a Vue PWA to Flutter during my time there. I know what it means to own the contract between backend and client, and to debug the issues that only show up under real usage.
+
+My path has covered different sides of the stack. At Buser I was full-stack. At Inoa I shifted toward platform, DevOps, and SRE work, including CI/CD, observability, and operating the systems behind a regulated financial product. At Eden I collapsed back into a deep backend and cloud focus: GraphQL API work, heavy database optimization, and running services on AWS.
+
+Why I'm applying: I've mostly worked at smaller, high-pressure startups, and I'm looking for a more robust engineering environment where I can focus on harder problems without constantly reinventing foundations. CharterUP looks like that step: real scale, real funding, and a domain I already understand. I'm also looking to engage with the US market.
+
+On the JVM side, I haven't worked with Java or Kotlin in production. My previous years are in Python/Django, JavaScript, a little bit of Dart. I've learned new languages before when the job asked for it and I'm fine doing that again. The fundamentals travel: API design, distributed systems, database work, observability, CI/CD.
+
+Happy to talk anytime.
+Daniel

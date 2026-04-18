@@ -1,5 +1,6 @@
 	
 Deploy:
+	I managed this deploy, those tickets are not mine!
 	tickets:
 		fix/VWS-523/separate-sr-series - procesamiento dicom, para separar intancias sr
 			https://github.com/eva-tech/evapacs-back/pull/5351
@@ -1023,7 +1024,24 @@ Histórico:
 				en módulo ALB, en target_group, el target_type es diferente para ec2 y fargate (instance vs ip)
 		Analysis:	
 			estructura actual
-	Eden - quem é quem?
+	AI work (what Daniel actually did):
+	1 - AI test client / evaluation script
+		Task: test a bunch of samples against the AI models
+		Built a script that:
+			- Connects to the system as if it were a real client
+			- Downloads and caches a bunch of files
+			- Runs in parallel as needed
+			- Does fuzzy/match comparison between outputs
+			- Outputs results to a CSV
+		This is an evaluation/testing tool, not the AI system itself
+
+	2 - Tool calling integration
+		Set up the tool calling integration (LLM function/tool calls) into the main application
+		Also set up testing for it
+		Restructured code so it could be tested and run locally
+		Purpose: allow the ML team to iterate and improve the AI system independently
+
+Eden - quem é quem?
 
 		quien
 			Esteban

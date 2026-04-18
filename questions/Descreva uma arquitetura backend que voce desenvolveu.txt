@@ -1,0 +1,13 @@
+1) Geração de laudos com IA (Eden):
+O backend principal era um monolito Django rodando em ECS Fargate, com Aurora PostgreSQL e 2 réplicas de leitura. Além dele, existia um serviço dedicado à geração de laudos por IA, construído com LangGraph, Celery e Redis. Esse serviço consultava o monolito via REST para buscar dados do paciente e dos templates.
+O fluxo funcionava assim: o frontend SPA abria um WebSocket direto com o serviço de IA. A partir daí, o pipeline classificava a intenção do médico, montava o prompt com os dados relevantes, chamava o LLM e fazia streaming dos tokens de volta pelo mesmo WebSocket. O Redis cuidava do gerenciamento de sessões e também servia como broker do Celery.
+A plataforma era multi-tenant, cada organização com seus próprios templates e configurações.
+Ademais de estos 2 serviços, havia mais 3-4-5 serviços menores
+
+
+2) Extração de microserviço (Buser):
+O ponto de partida era um monolito Django que cobria toda a operação de transporte rodoviário.
+Extraí o domínio do motorista para um serviço próprio.
+Na primeira versão ele rodava em ECS, compartilhava o banco com o monolito e se comunicava com os demais serviços via REST e filas.
+Com o tempo, migramos ele para Kubernetes, com banco dedicado e boa parte de dados migrados.
+A comunicação evoluiu para eventos publicados no RabbitMQ com fan-out, permitindo que outros serviços consumissem de forma desacoplada.

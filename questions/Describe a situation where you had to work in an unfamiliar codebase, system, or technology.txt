@@ -1,0 +1,6 @@
+Honestly, coding agents have changed this so much that it almost feels like a different question than it was last year. Nowadays when I land in an unfamiliar codebase, the first thing I do is just ask the agent: what's the general structure here, how do they test, how do I run this locally. In ten minutes I have a working mental model that used to take days of poking around to build.
+
+At Eden, I did it the old way. I read the README, then found architectural docs mostly by talking to people on the team, one conversation leading to the next. I also edited some of those docs myself and asked senior engineers to comment, which turned out to be a good forcing function to check my understanding. And on my first PRs in each new area of the codebase I'd ask for a sync review instead of just async, so I could ask questions in real time rather than go back and forth in comments.
+The whole point is to get the stuff that lives in people's heads, not in docs, and to avoid the mistakes the codebase tends to induce in new people.
+In a new environment I'd do both: agent to get oriented fast, senior conversation to keep me from contributing wrong. 
+Something I read that caught my attention was that someone created a guidelines docs to improve agent work in a new codebase and then invited a senior to discuss the doc.

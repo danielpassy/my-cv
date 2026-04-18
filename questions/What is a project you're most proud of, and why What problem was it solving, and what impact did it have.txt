@@ -1,0 +1,15 @@
+Probably the work I did restructuring the platform at Inoa.
+
+Inoa makes financial analytics software for asset managers and brokers. When I joined, the codebase had been around long enough to accumulate some serious problems. Each client had its own branch, and over time those branches had diverged by more than 20,000 lines of code. A feature built for one client would never make it to the others, and any shared fix had to be manually backported. It was unsustainable.
+
+On the infrastructure side, queues were backing up to 700,000 messages, with no clear ownership and no visibility into what was failing or why. There were downtimes basically every other day. Developers couldn't deploy during business hours, so they had to stay awake until around midnight. The build and deploy pipeline took 40 to 50 minutes, spread across five different interfaces, with no consistent logging.
+
+My boss and I were in charge of planning and executing the improvements.
+We built a proper branch management system and merged everything back into a single codebase, which meant reconciling those 20,000 lines of divergence. We added queue monitoring, assigned ownership, and made failures visible. We moved deploys to scheduled windows with observability so engineers could actually see what was happening and react without waiting for midnight. We rebuilt the CI/CD pipeline and got it down to about 10 minutes, consolidated into one interface and with every step tracked.
+
+We also introduced a testing CI that had essentially never existed before, which helped a lot with development confidence.
+
+The results were clear: average time between incidents went from one every two days to one every 25 days. We went months without a serious incident. Build times dropped by 75%. The team could ship code without dreading it.
+
+The coolest part is that, initially, I didn't have the trust of the company owners due to differences in trajectory (they were dropped out of school to build the company, so saw no value in automated testing, in modern tools, and we're quite skeptical of mainstream approaches).
+The codebase was old and not well understood, so each step helped us build trust and made it possible to try things that initially met resistance.

@@ -1,0 +1,16 @@
+At Eden the main page is a study listing table for doctors to view and manage. The list was fed by a table of 12 million rows, it did 11 joins, and each user has their own set of permissions with no group permissions.
+
+Users could filter and sort by almost any column. It was slow, and the complaints were consistent, especially from our biggest clients. API time was around 4 seconds, whole page load was 9 seconds.
+
+I got the work to make it better, 1 month into the job.
+We had New Relic, but it only exposed the worst outlier requests (above 9 seconds). Digging into those traces, the problems were mostly the Postgres planner making bad decisions on orderings that almost no one used. We already had a lot of indexes, but fixing all the corner cases would mean adding 10-15 more, slowing down writes. We needed something more general.
+
+One idea surfaced immediately: partitioning by date, since doctors mostly care about recent studies. Product wouldn't allow a default date filter, so that was off the table.
+
+We already had a self-hosted Sentry instance not set up for performance tracing, so I configured it. That gave us the full latency distribution for the first time.
+
+Two things stood out. First, N+1 queries: our GraphQL layer wasn't prefetching in cases where resolvers triggered data fetching indirectly, so each request fired 92 extra queries. I introduced graphene hints, a tool not previously used in the codebase, to declare joins and prefetches per field. Second, the text-search column had a GiST index, which is the wrong choice for that workload. Swapping it for GIN helped a lot.
+
+The product has a 99.9% SLA, so I did careful load testing before rolling anything out.
+
+After both changes, p50 dropped around 60% and p95 dropped around 70%.

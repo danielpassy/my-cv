@@ -1,0 +1,10 @@
+1. Descreva uma arquitetura backend que voce desenvolveu
+2. What challenge could elixir functional BEAM facilitate in your life
+3. Tell us about your proudest achievement from your last two years of work
+4. Share an example of a project you led through collaboration with stakeholders product and design
+5. Briefly describe your experience building backend services or APIs for mobile or client-facing applications
+6. Briefly describe the types of systems you've worked on across the stack
+7. Tell us about a time you developed a mobile-responsive application
+8. Describe a situation where you had to work in an unfamiliar codebase, system, or technology
+9. Tell us about a production issue or bug you personally helped resolve. What was happening, and what did you do
+10. What is a project you're most proud of, and why? What problem was it solving, and what impact did it have?
